@@ -98,7 +98,7 @@ function onPaymentError() {
         <li
           v-for="item in items"
           :key="item.id"
-          class="flex gap-4 rounded-card bg-surface p-3 ring-1 ring-fg/5"
+          class="flex gap-4 rounded-card bg-surface p-3 raised"
         >
           <NuxtLink :to="`/products/${item.slug}`" class="shrink-0 overflow-hidden rounded-2xl bg-surface-2">
             <img
@@ -120,7 +120,7 @@ function onPaymentError() {
 
             <div class="mt-auto flex items-center justify-between gap-3 pt-2">
               <!-- Quantity stepper -->
-              <div class="inline-flex items-center rounded-pill ring-1 ring-fg/15">
+              <div class="inline-flex items-center rounded-pill bg-surface-2 raised">
                 <button
                   type="button"
                   class="inline-flex h-9 w-9 items-center justify-center rounded-full text-fg/70 transition-colors hover:text-fg disabled:opacity-40"
@@ -160,7 +160,7 @@ function onPaymentError() {
       </ul>
 
       <!-- Summary + shipping + checkout -->
-      <aside class="flex h-fit flex-col gap-5 rounded-card bg-surface p-5 ring-1 ring-fg/5 lg:sticky lg:top-20">
+      <aside class="flex h-fit flex-col gap-5 rounded-card bg-surface p-5 shadow-card lg:sticky lg:top-20">
         <div class="flex items-baseline justify-between">
           <span class="text-fg/70">{{ t((m) => m.cart.subtotal) }}</span>
           <span class="text-2xl font-bold text-fg">{{ fmt(subtotal) }}</span>

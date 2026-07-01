@@ -26,9 +26,8 @@ const tag = computed(() =>
 )
 
 const VARIANTS: Record<string, string> = {
-  solid:
-    'bg-primary text-on-primary hover:bg-primary-strong shadow-[0_14px_42px_-12px_rgb(192_132_252/0.55)] hover:shadow-[0_20px_54px_-12px_rgb(192_132_252/0.75)]',
-  outline: 'glass text-fg hover:bg-fg/10',
+  solid: 'btn-solid',
+  outline: 'btn-soft text-fg',
   ghost: 'text-fg hover:bg-fg/8',
 }
 

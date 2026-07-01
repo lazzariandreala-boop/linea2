@@ -8,8 +8,7 @@ defineProps<{ address: ShippingAddress }>()
 
 const { t } = useT()
 
-const inputClass =
-  'w-full rounded-xl bg-surface-2 px-4 py-3 text-fg outline-none ring-1 ring-fg/10 transition-shadow focus:ring-2 focus:ring-primary'
+const inputClass = 'field'
 </script>
 
 <template>

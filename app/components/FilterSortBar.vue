@@ -20,8 +20,8 @@ const { t } = useT()
     >
       <button
         type="button"
-        class="shrink-0 rounded-pill px-3 py-1.5 text-sm font-medium transition-colors"
-        :class="tag === null ? 'bg-primary text-on-primary' : 'bg-fg/8 text-fg/70 hover:text-fg'"
+        class="raised shrink-0 rounded-pill px-3 py-1.5 text-sm font-medium transition-colors"
+        :class="tag === null ? 'bg-primary text-on-primary' : 'bg-surface-2 text-fg/70 hover:text-fg'"
         @click="tag = null"
       >
         {{ t((m) => m.catalog.all) }}
@@ -30,8 +30,8 @@ const { t } = useT()
         v-for="tg in tags"
         :key="tg"
         type="button"
-        class="shrink-0 rounded-pill px-3 py-1.5 text-sm font-medium capitalize transition-colors"
-        :class="tag === tg ? 'bg-primary text-on-primary' : 'bg-fg/8 text-fg/70 hover:text-fg'"
+        class="raised shrink-0 rounded-pill px-3 py-1.5 text-sm font-medium capitalize transition-colors"
+        :class="tag === tg ? 'bg-primary text-on-primary' : 'bg-surface-2 text-fg/70 hover:text-fg'"
         @click="tag = tg"
       >
         {{ tg }}
@@ -44,7 +44,7 @@ const { t } = useT()
       <select
         id="sort"
         v-model="sort"
-        class="min-h-10 rounded-pill border border-fg/20 bg-surface px-4 py-2 text-sm text-fg outline-none focus-visible:border-accent"
+        class="field field-pill field-select min-h-10 py-2 text-sm"
       >
         <option value="newest">{{ t((m) => m.catalog.sortNewest) }}</option>
         <option value="priceAsc">{{ t((m) => m.catalog.sortPriceAsc) }}</option>

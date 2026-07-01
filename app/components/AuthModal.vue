@@ -118,7 +118,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 v-model="displayName"
                 type="text"
                 autocomplete="name"
-                class="rounded-pill bg-surface-2 px-4 py-3 text-fg outline-none ring-1 ring-fg/10 transition-shadow focus:ring-2 focus:ring-primary"
+                class="field"
               />
             </label>
 
@@ -129,7 +129,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 type="email"
                 required
                 autocomplete="email"
-                class="rounded-pill bg-surface-2 px-4 py-3 text-fg outline-none ring-1 ring-fg/10 transition-shadow focus:ring-2 focus:ring-primary"
+                class="field"
               />
             </label>
 
@@ -141,7 +141,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 required
                 minlength="6"
                 :autocomplete="mode === 'signin' ? 'current-password' : 'new-password'"
-                class="rounded-pill bg-surface-2 px-4 py-3 text-fg outline-none ring-1 ring-fg/10 transition-shadow focus:ring-2 focus:ring-primary"
+                class="field"
               />
             </label>
 

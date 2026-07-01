@@ -79,8 +79,7 @@ function fmtDate(o: StoredOrder): string {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(ts.toDate())
 }
 
-const inputClass =
-  'w-full rounded-xl bg-surface-2 px-4 py-3 text-fg outline-none ring-1 ring-fg/10 transition-shadow focus:ring-2 focus:ring-primary'
+const inputClass = 'field'
 </script>
 
 <template>
@@ -148,7 +147,7 @@ const inputClass =
           <li
             v-for="o in orders"
             :key="o.id"
-            class="flex items-center justify-between gap-4 rounded-2xl bg-surface p-4 ring-1 ring-fg/5"
+            class="flex items-center justify-between gap-4 rounded-2xl bg-surface p-4 raised"
           >
             <div>
               <p class="font-semibold text-fg">{{ fmtDate(o) }}</p>

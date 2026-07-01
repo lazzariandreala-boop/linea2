@@ -3,7 +3,7 @@ import type { StrapiCollectionResponse, StrapiQueryParams } from '~/types/strapi
 import { applyCollection, cta, media, MOCK_TS } from './builders'
 
 // Demo contact targets (mock data only — not secrets).
-const WA = '393331234567'
+const WA = '393401475223'
 const MAIL = 'ordini@linea2.example'
 
 /**
