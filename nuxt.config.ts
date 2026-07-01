@@ -45,7 +45,25 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Server-only. Optional: public read endpoints usually need no token.
     strapiToken: '',
+    // PayPal server-side secret + environment (Orders API v2). The secret is
+    // NEVER exposed to the client; override via NUXT_PAYPAL_SECRET / _ENV.
+    paypalSecret: '',
+    paypalEnv: 'sandbox', // 'sandbox' | 'live'
     public: {
+      // Firebase web config (PUBLIC by design). Defaults target the linea2
+      // project; override any field via NUXT_PUBLIC_FIREBASE_* env vars.
+      firebase: {
+        apiKey: 'AIzaSyCV6vtwYRBd-bB7Vieg1XJX1Nw66bc15wM',
+        authDomain: 'linea2-6e804.firebaseapp.com',
+        projectId: 'linea2-6e804',
+        storageBucket: 'linea2-6e804.firebasestorage.app',
+        messagingSenderId: '607282627488',
+        appId: '1:607282627488:web:f13a8e870d171ea1dd9ac5',
+        measurementId: 'G-9HWMELK5RZ',
+      },
+      // PayPal browser JS SDK client id (public) + display currency.
+      paypalClientId: '',
+      paypalCurrency: 'EUR',
       // Base URL of the Strapi instance. Empty string => same-origin, which is
       // how mock mode serves shipped placeholder media from /public/uploads.
       strapiUrl: 'http://localhost:1337',
@@ -107,6 +125,16 @@ export default defineNuxtConfig({
         { name: 'format-detection', content: 'telephone=no' },
       ],
       link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+      script: [
+        {
+          // No-FOUC theme boot: set <html data-theme> before first paint from
+          // the stored choice, else the OS preference (dark-first fallback).
+          // Kept in sync at runtime by useTheme(). Must stay dependency-free.
+          tagPosition: 'head',
+          innerHTML:
+            "(function(){try{var k='linea2-theme',s=localStorage.getItem(k),t=s==='light'||s==='dark'?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.dataset.theme=t;}catch(e){}})();",
+        },
+      ],
     },
   },
 

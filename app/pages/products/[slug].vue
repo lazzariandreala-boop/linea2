@@ -53,12 +53,13 @@ useSeoHead({
           </li>
         </ul>
 
-        <div v-if="product.cta" class="mt-9">
-          <CtaButton :cta="product.cta" size="lg" />
-          <p class="mt-3 text-sm text-fg/50">
-            Pezzo unico realizzato a mano da materiali di recupero · Spedizione in tutta Italia
-          </p>
+        <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <AddToCartButton :product="product" size="lg" />
+          <CtaButton v-if="product.cta" :cta="product.cta" size="lg" />
         </div>
+        <p class="mt-3 text-sm text-fg/50">
+          Pezzo unico realizzato a mano da materiali di recupero · Spedizione in tutta Italia
+        </p>
       </div>
     </div>
   </article>

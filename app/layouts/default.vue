@@ -18,5 +18,8 @@ const { t } = useT()
     </main>
 
     <AppFooter />
+
+    <!-- Global login/registration modal (opened from the header avatar). -->
+    <AuthModal />
   </div>
 </template>

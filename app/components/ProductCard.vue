@@ -36,11 +36,14 @@ const price = computed(() => formatPrice(props.product.price))
       {{ t((m) => m.common.featured) }}
     </UiBadge>
 
-    <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/85 via-black/35 to-transparent p-4 pt-12">
-      <h3 class="font-display text-lg font-bold leading-tight text-white">
-        {{ product.title }}
-      </h3>
-      <p v-if="price" class="mt-1 text-sm font-semibold text-white/90">{{ price }}</p>
+    <div class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-linear-to-t from-black/85 via-black/35 to-transparent p-4 pt-12">
+      <div class="min-w-0">
+        <h3 class="font-display text-lg font-bold leading-tight text-white">
+          {{ product.title }}
+        </h3>
+        <p v-if="price" class="mt-1 text-sm font-semibold text-white/90">{{ price }}</p>
+      </div>
+      <AddToCartButton :product="product" icon class="shrink-0" />
     </div>
 
     <span
