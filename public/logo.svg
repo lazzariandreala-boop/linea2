@@ -1,0 +1,7 @@
+<!-- Placeholder logo — replace this file (public/logo.svg) with the real brand logo.
+     Same path, so no code/config change is needed. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 48" role="img" aria-label="Linea 2 — upcycling">
+  <path d="M20 4 C7 13 7 31 20 44 C33 31 33 13 20 4 Z" fill="#5e6b4f"/>
+  <path d="M20 9 V40" stroke="#f3eee3" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="46" y="34" font-family="ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="800" letter-spacing="-1.2" fill="#23201b">linea<tspan fill="#c2683b">2</tspan></text>
+</svg>

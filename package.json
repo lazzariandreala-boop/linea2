@@ -1,0 +1,37 @@
+{
+  "name": "linea-2-vetrina",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "gen:placeholders": "node scripts/gen-placeholders.mjs",
+    "typecheck": "nuxi typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@nuxt/image": "^2.0.0",
+    "@tailwindcss/vite": "^4.3.1",
+    "@vueuse/core": "^13.9.0",
+    "@vueuse/motion": "^3.0.3",
+    "nuxt": "npm:nuxt-nightly@5x",
+    "tailwindcss": "^4.3.1",
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.0.3",
+    "@playwright/test": "^1.61.1",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^20.10.6",
+    "playwright": "^1.61.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^3.3.5"
+  }
+}
