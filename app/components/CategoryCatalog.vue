@@ -79,6 +79,20 @@ useSeoHead({
       </NuxtLink>
     </nav>
 
+    <section v-if="!category" class="mt-10" aria-labelledby="made-to-order">
+      <div class="flex items-end justify-between gap-4">
+        <h2 id="made-to-order" class="text-title text-fg">Made to order</h2>
+        <NuxtLink to="/customize" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
+          Customize
+        </NuxtLink>
+      </div>
+      <p class="mt-2 max-w-xl text-sm text-fg/70">Scegli il modello e personalizzalo in 3D: lo cuciamo su ordinazione.</p>
+      <div class="mt-5">
+        <BagModelGrid />
+      </div>
+    </section>
+
+    <h2 v-if="!category" class="mt-14 text-title text-fg">Ready to ship</h2>
     <div class="mt-8">
       <FilterSortBar v-model:sort="sort" v-model:tag="tag" :tags="tags" :count="displayed.length" />
     </div>

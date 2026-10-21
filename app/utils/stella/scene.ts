@@ -1,19 +1,20 @@
 /**
- * three.js scene for the Stella configurator. Loads the bag exported from CLO
- * (public/models/stella.glb), dresses each fabric group with procedural
- * denim/lining textures, and lays two decals (patch + monogram) that are
- * raycast onto the curved front panel. Browser-only: import it from a
- * client-only component.
+ * three.js scene for the bag configurator. Loads the chosen model from
+ * public/models/, dresses it with procedural denim/lining textures, and lays
+ * two decals (patch + monogram) that are raycast onto the curved front.
+ * - `parts` models (Stella, from CLO) keep their fabric groups: body, strap,
+ *   tab, rings and stitches each get their own material.
+ * - `mesh` models (Meshy) are a single untextured shell: they get computed
+ *   normals and box-projected UVs, then one denim material.
+ * Browser-only: import it from a client-only component.
  *
- * Note: the patch decal also hides the perforated "H" that is still cut into
- * the source model; that must be removed in CLO before the site goes live.
+ * Note: on Stella the patch decal also hides the perforated "H" that is still
+ * cut into the source model; that must be removed in CLO before going live.
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { HW, LINING, STELLA_THREAD, WASH, findOption, type StellaState } from './options'
+import { HW, LINING, STELLA_THREAD, WASH, findBag, findOption, maxWashes, type BagModel, type StellaState } from './options'
 import { denim, lining, mix, monoCanvas, patchCanvas, type DenimSpec } from './textures'
-
-export const STELLA_MODEL_URL = '/models/stella.glb'
 
 /** Front, side, back. */
 export const STELLA_VIEWS = [0, Math.PI / 2, Math.PI] as const
@@ -30,6 +31,8 @@ interface Parts {
 }
 
 interface Model {
+  bag: BagModel
+  holder: THREE.Group
   parts: Parts
   inner: THREE.Mesh[]
   patch: THREE.Mesh
@@ -41,8 +44,9 @@ interface Model {
 
 export interface StellaSceneOptions {
   host: HTMLElement
-  modelUrl?: string
-  /** Called once the model is loaded (true) or failed (false). */
+  /** A different bag model started loading. */
+  onLoading?: () => void
+  /** Called each time a model is loaded (true) or failed (false). */
   onReady?: (ok: boolean) => void
   /** Called with the index into STELLA_VIEWS closest to the current angle. */
   onViewChange?: (index: number) => void
@@ -128,6 +132,40 @@ function conform(targets: THREE.Mesh[], cx: number, cy: number, w: number, h: nu
   return geo
 }
 
+/**
+ * Meshy exports carry positions only. Compute smooth normals, then split the
+ * triangles and give each one UVs projected along its dominant axis (box
+ * mapping), in model units, so the denim weave tiles evenly.
+ */
+function prepareShell(src: THREE.BufferGeometry): THREE.BufferGeometry {
+  src.computeVertexNormals()
+  const geo = src.index ? src.toNonIndexed() : src
+  const p = geo.attributes.position as THREE.BufferAttribute
+  const uv = new Float32Array(p.count * 2)
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3()
+  for (let i = 0; i < p.count; i += 3) {
+    a.fromBufferAttribute(p, i); b.fromBufferAttribute(p, i + 1); c.fromBufferAttribute(p, i + 2)
+    n.subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b))
+    const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z)
+    for (let k = 0; k < 3; k++) {
+      const x = p.getX(i + k), y = p.getY(i + k), z = p.getZ(i + k)
+      const [u, v] = ax >= ay && ax >= az ? [z, y] : ay >= az ? [x, z] : [x, y]
+      uv[(i + k) * 2] = u
+      uv[(i + k) * 2 + 1] = v
+    }
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  return geo
+}
+
+function disposeObject(o: THREE.Object3D) {
+  o.traverse((x) => {
+    const m = x as THREE.Mesh
+    if (m.geometry) m.geometry.dispose()
+    if (m.material) disposeMaterial(m.material)
+  })
+}
+
 function disposeMaterial(m: THREE.Material | THREE.Material[] | undefined) {
   if (!m) return
   for (const x of ([] as THREE.Material[]).concat(m)) {
@@ -196,7 +234,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     if (!model) return
     const P = model.parts
     const main = findOption(WASH, state.wash[0] ?? 'indigo')
-    const acc = state.wash[1] ? findOption(WASH, state.wash[1]) : main
+    const acc = state.wash[1] && maxWashes(model.bag) > 1 ? findOption(WASH, state.wash[1]) : main
     const rep = model.repeat
     const spec = (o: typeof main): DenimSpec => ({ hex: o.hex!, textured: o.textured, distressed: o.distressed })
     const fabric = (w: DenimSpec, seed: number, side: THREE.Side) => {
@@ -244,11 +282,16 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     })
   }
 
-  function onModel(sc: THREE.Object3D) {
+  function onModel(sc: THREE.Object3D, bag: BagModel) {
     const parts: Parts = { body: [], bodySide: [], strap: [], strapSide: [], tab: [], tabSide: [], ring: [], stitch: [] }
     sc.traverse((o) => {
       const m = o as THREE.Mesh
       if (!m.isMesh) return
+      if (bag.kind === 'mesh') {
+        m.geometry = prepareShell(m.geometry)
+        parts.body.push(m)
+        return
+      }
       const n = (m.material as THREE.Material | undefined)?.name ?? ''
       if (/HALKA/.test(n)) parts.ring.push(m)
       else if (/FABRIC 2_FRONT/.test(n)) parts.body.push(m)
@@ -259,9 +302,10 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       else if (/FABRIC 3_SIDE/.test(n)) parts.tabSide.push(m)
       else parts.stitch.push(m)
     })
-    if (!parts.body.length) throw new Error('Stella model has no body panels')
+    if (!parts.body.length) throw new Error(`${bag.id} model has no body panels`)
 
-    // Normalise: body 1.7 units tall, centred, slightly below the camera axis.
+    // Normalise: Stella's body (strap excluded) 1.7 units tall, slightly below
+    // the camera axis; single-shell models 2.1 units tall including handles.
     const wrap = new THREE.Group()
     wrap.add(sc)
     sc.updateMatrixWorld(true)
@@ -269,9 +313,9 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     parts.body.forEach((m) => bb.expandByObject(m))
     const sz = bb.getSize(new THREE.Vector3())
     const ct = bb.getCenter(new THREE.Vector3())
-    const k = 1.7 / sz.y
+    const k = (bag.kind === 'parts' ? 1.7 : 2.1) / sz.y
     wrap.scale.setScalar(k)
-    wrap.position.set(-ct.x * k, -ct.y * k - 0.32, -ct.z * k)
+    wrap.position.set(-ct.x * k, -ct.y * k - (bag.kind === 'parts' ? 0.32 : 0.08), -ct.z * k)
     const holder = new THREE.Group()
     holder.add(wrap)
     root.rotation.set(0, 0, 0)
@@ -285,9 +329,12 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     const H = bw.max.y - bw.min.y
     const cx = (bw.min.x + bw.max.x) / 2
     const dens = uvDensity(parts.body[0]!.geometry) / k
-    // Patch sits low on the front (covering the perforated H); monogram above.
-    const patchGeo = conform(parts.body, cx, bw.min.y + H * 0.31, W * 0.8, H * 0.56, 28, 0.012)
-    const monoGeo = conform(parts.body, cx, bw.min.y + H * 0.655, W * 0.26, W * 0.13, 10, 0.014)
+    // Patch sits low on the front (on Stella it covers the perforated H);
+    // monogram above it. Spots are per model, as fractions of the bbox.
+    const ps = bag.patch
+    const ms = bag.mono
+    const patchGeo = conform(parts.body, cx, bw.min.y + H * ps.y, W * ps.w, H * ps.h, 28, 0.012)
+    const monoGeo = conform(parts.body, cx, bw.min.y + H * ms.y, W * ms.w, W * ms.w * 0.5, 10, 0.014)
 
     // Inner shell (BackSide) so the lining shows through the bag's opening.
     const inner = parts.body.map((m) => {
@@ -301,20 +348,36 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     const patch = new THREE.Mesh(patchGeo)
     const mono = new THREE.Mesh(monoGeo)
     holder.add(patch, mono)
-    model = { parts, inner, patch, mono, repeat: 1 / (dens * 0.14), aspect: (H * 0.56) / (W * 0.8) }
+    model = { bag, holder, parts, inner, patch, mono, repeat: 1 / (dens * 0.14), aspect: (H * ps.h) / (W * ps.w) }
   }
 
-  new GLTFLoader()
-    .loadAsync(opts.modelUrl ?? STELLA_MODEL_URL)
-    .then((gltf) => {
-      if (disposed) return
-      onModel(gltf.scene)
-      if (pending) applyModel(pending)
-      opts.onReady?.(true)
-    })
-    .catch(() => {
-      if (!disposed) opts.onReady?.(false)
-    })
+  // Load on demand; a newer request supersedes one still in flight.
+  const loader = new GLTFLoader()
+  let wanted = ''
+  function load(bag: BagModel) {
+    wanted = bag.id
+    opts.onLoading?.()
+    loader
+      .loadAsync(bag.url)
+      .then((gltf) => {
+        if (disposed || wanted !== bag.id) return
+        if (model) {
+          root.remove(model.holder)
+          disposeObject(model.holder)
+          model = null
+        }
+        const savedRot = root.rotation.clone()
+        const savedY = root.position.y
+        onModel(gltf.scene, bag)
+        root.rotation.copy(savedRot)
+        root.position.y = savedY
+        if (pending) applyModel(pending)
+        opts.onReady?.(true)
+      })
+      .catch(() => {
+        if (!disposed && wanted === bag.id) opts.onReady?.(false)
+      })
+  }
 
   // ── Sizing ─────────────────────────────────────────────────────────────
   let zoomed = false
@@ -394,7 +457,9 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   return {
     apply(state) {
       pending = state
-      applyModel(state)
+      const bag = findBag(state.model)
+      if (bag.id !== wanted) load(bag)
+      if (model?.bag.id === bag.id) applyModel(state)
     },
     rotateBy(radians) {
       spin = false
@@ -423,11 +488,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       el.removeEventListener('pointermove', onMove)
       el.removeEventListener('pointerup', onUp)
       el.removeEventListener('pointercancel', onUp)
-      scene.traverse((o) => {
-        const m = o as THREE.Mesh
-        if (m.geometry) m.geometry.dispose()
-        if (m.material) disposeMaterial(m.material)
-      })
+      disposeObject(scene)
       envMap.dispose()
       pmrem.dispose()
       renderer.dispose()

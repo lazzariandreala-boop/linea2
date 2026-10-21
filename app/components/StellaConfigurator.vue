@@ -6,6 +6,7 @@
  * "Add to bag" that drops a made-to-order line into the cart.
  */
 import {
+  BAGS,
   FINISH,
   HW,
   LINING,
@@ -15,10 +16,14 @@ import {
   cleanInitials,
   defaultStellaState,
   describeStella,
+  findBag,
   findOption,
+  hasHardware,
+  maxWashes,
   stellaKey,
   stellaPrice,
   toggleWash,
+  withModel,
   type StellaGroup,
   type StellaOption,
   type StellaState,
@@ -27,9 +32,32 @@ import { paintBackdrop, swatchURL } from '~/utils/stella/textures'
 import { createStellaScene, type StellaScene } from '~/utils/stella/scene'
 
 const { addLine } = useCart()
+const route = useRoute()
+const router = useRouter()
 
-const state = reactive<StellaState>(defaultStellaState())
+const initialModel = typeof route.query.model === 'string' ? findBag(route.query.model).id : 'stella'
+const state = reactive<StellaState>(withModel(defaultStellaState(), initialModel))
+const bag = computed(() => findBag(state.model))
 const price = computed(() => stellaPrice(state))
+
+/** Option groups this bag supports (hardware needs separate rings). */
+const groups = computed(() => STELLA_GROUPS.filter((g) => g.key !== 'hw' || hasHardware(bag.value)))
+type TabKey = StellaGroup | 'model'
+const tabs = computed<{ key: TabKey; tab: string }[]>(() => [{ key: 'model', tab: 'Bag' }, ...groups.value])
+
+function pickModel(id: string) {
+  if (id === state.model) return
+  Object.assign(state, withModel(state, id))
+  added.value = false
+  if (route.query.model !== id) void router.replace({ query: { ...route.query, model: id } })
+}
+// Links like /customize?model=luna while already on the page.
+watch(
+  () => route.query.model,
+  (m) => {
+    if (typeof m === 'string') pickModel(findBag(m).id)
+  },
+)
 const fmt = (n: number) => `€${n.toFixed(2)}`
 
 // ── Swatches (painted once fonts are ready, so the "L2" serif renders) ────
@@ -44,7 +72,7 @@ function isSelected(group: StellaGroup, id: string) {
   return group === 'wash' ? state.wash.includes(id) : state[group] === id
 }
 function pick(group: StellaGroup, id: string) {
-  if (group === 'wash') state.wash = toggleWash(state.wash, id)
+  if (group === 'wash') state.wash = toggleWash(state.wash, id, maxWashes(bag.value))
   else state[group] = id
 }
 function ariaLabel(o: StellaOption) {
@@ -55,14 +83,14 @@ const summary = computed(() => {
   const list: { key: string; name: string }[] = state.wash.map((id) => ({ key: `wash:${id}`, name: findOption(WASH, id).name }))
   list.push({ key: `lining:${state.lining}`, name: findOption(LINING, state.lining).name })
   if (state.patch !== 'none') list.push({ key: `patch:${state.patch}`, name: findOption(PATCH, state.patch).name })
-  list.push({ key: `hw:${state.hw}`, name: findOption(HW, state.hw).name })
+  if (hasHardware(bag.value)) list.push({ key: `hw:${state.hw}`, name: findOption(HW, state.hw).name })
   if (state.finish !== 'none') list.push({ key: `finish:${state.finish}`, name: findOption(FINISH, state.finish).name })
   return list.slice(0, 6)
 })
 
 const meta = computed(() => {
   const main = findOption(WASH, state.wash[0] ?? 'indigo')
-  return `SKU L2-STL-${state.wash.map((w) => w.slice(0, 3).toUpperCase()).join('')}-${state.lining.slice(0, 2).toUpperCase()} · ${main.hex} · 3–4 weeks`
+  return `SKU L2-${bag.value.id.slice(0, 3).toUpperCase()}-${state.wash.map((w) => w.slice(0, 3).toUpperCase()).join('')}-${state.lining.slice(0, 2).toUpperCase()} · ${main.hex} · 3–4 weeks`
 })
 
 function onInitials(e: Event) {
@@ -73,8 +101,8 @@ function onInitials(e: Event) {
 
 // ── Tabs with scroll-spy over the inspector sections ─────────────────────
 const scroller = ref<HTMLElement | null>(null)
-const activeTab = ref<StellaGroup>('wash')
-function goTab(key: StellaGroup) {
+const activeTab = ref<TabKey>('model')
+function goTab(key: TabKey) {
   activeTab.value = key
   const el = document.getElementById(`stella-g-${key}`)
   if (el && scroller.value) scroller.value.scrollTo({ top: el.offsetTop - scroller.value.offsetTop, behavior: 'smooth' })
@@ -82,8 +110,8 @@ function goTab(key: StellaGroup) {
 function onScroll() {
   const sc = scroller.value
   if (!sc) return
-  let cur: StellaGroup = 'wash'
-  for (const g of STELLA_GROUPS) {
+  let cur: TabKey = 'model'
+  for (const g of tabs.value) {
     const el = document.getElementById(`stella-g-${g.key}`)
     if (el && el.offsetTop - sc.offsetTop - 30 <= sc.scrollTop) cur = g.key
   }
@@ -116,6 +144,7 @@ onMounted(() => {
   try {
     scene = createStellaScene({
       host: host.value,
+      onLoading: () => (status.value = 'loading'),
       onReady: (ok) => (status.value = ok ? 'ready' : 'error'),
       onViewChange: (i) => (view.value = i),
       onInteract: () => {
@@ -158,16 +187,17 @@ function thumbnail(): string | null {
 
 function addToBag() {
   const snap: StellaState = { ...state, wash: [...state.wash], initials: state.finish === 'none' ? '' : state.initials }
+  const b = findBag(snap.model)
   addLine({
     id: stellaKey(snap),
-    slug: 'stella',
-    title: 'Stella Bucket Bag',
+    slug: b.id,
+    title: b.title,
     price: stellaPrice(snap),
     image: thumbnail(),
-    imageAlt: 'Borsa Stella personalizzata',
+    imageAlt: `Borsa ${b.name} personalizzata`,
     quantity: 1,
     details: describeStella(snap),
-    link: '/customize',
+    link: `/customize?model=${b.id}`,
   })
   added.value = true
 }
@@ -179,7 +209,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 <template>
   <div class="stella">
     <div class="stage">
-      <section class="viewport" aria-label="Anteprima 3D della borsa Stella">
+      <section class="viewport" :aria-label="`Anteprima 3D della borsa ${bag.name}`">
         <canvas ref="backdrop" class="backdrop" aria-hidden="true" />
         <div ref="host" class="gl" />
 
@@ -231,10 +261,10 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
       </section>
 
       <aside class="inspector panel-glass" aria-label="Personalizza la borsa">
-        <h1 class="ttl">Customize your Stella bag</h1>
+        <h1 class="ttl">Customize your {{ bag.name }} bag</h1>
         <div class="tabs" role="tablist">
           <button
-            v-for="(g, i) in STELLA_GROUPS"
+            v-for="(g, i) in tabs"
             :key="g.key"
             type="button"
             role="tab"
@@ -246,8 +276,25 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         </div>
 
         <div ref="scroller" class="scroll" @scroll.passive="onScroll">
-          <div v-for="(g, i) in STELLA_GROUPS" :id="`stella-g-${g.key}`" :key="g.key" class="grp">
-            <h3>{{ i + 1 }}. {{ g.title }}</h3>
+          <div id="stella-g-model" class="grp">
+            <h3>1. Bag model</h3>
+            <div class="sws bags">
+              <button
+                v-for="b in BAGS"
+                :key="b.id"
+                type="button"
+                class="swb"
+                :aria-pressed="state.model === b.id"
+                :aria-label="`${b.name}, ${b.type}, da ${b.p} euro`"
+                @click="pickModel(b.id)"
+              >
+                <span class="sw bag" :style="{ backgroundImage: `url(${b.thumb})` }"><i class="chk" /></span>
+                <span>{{ b.name }}<small>{{ b.type }}</small></span>
+              </button>
+            </div>
+          </div>
+          <div v-for="(g, i) in groups" :id="`stella-g-${g.key}`" :key="g.key" class="grp">
+            <h3>{{ i + 2 }}. {{ g.title }}</h3>
             <div class="sws">
               <button
                 v-for="o in g.list"
@@ -266,7 +313,9 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 <span>{{ o.name }}</span>
               </button>
             </div>
-            <p v-if="g.key === 'wash'" class="note">Up to two washes: the second one goes on strap and tab.</p>
+            <p v-if="g.key === 'wash'" class="note">
+              {{ maxWashes(bag) > 1 ? 'Up to two washes: the second one goes on strap and tab.' : 'One wash for the whole bag.' }}
+            </p>
             <template v-if="g.key === 'finish'">
               <label class="ini" for="stella-initials">
                 Custom initials
@@ -617,6 +666,20 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 }
 .swb[aria-pressed='true'] .chk {
   display: grid;
+}
+.sws.bags {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 6px;
+}
+.sw.bag {
+  background-color: #8b8277;
+  background-size: cover;
+}
+.swb small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9.5px;
+  color: var(--color-muted);
 }
 .sw.none {
   background: transparent;
