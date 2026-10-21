@@ -5,8 +5,8 @@ const STORAGE_KEY = 'linea2-theme'
 
 /** Keeps the browser UI (address bar / status bar) in sync with the canvas. */
 const THEME_COLOR: Record<Theme, string> = {
-  dark: '#0e0e10',
-  light: '#f6f5f1',
+  dark: '#262523',
+  light: '#f9f9fb',
 }
 
 /**
@@ -48,8 +48,8 @@ export function useTheme() {
     set(theme.value === 'dark' ? 'light' : 'dark')
   }
 
-  // Adopt whatever the pre-hydration script resolved (stored choice or OS
-  // preference) so reactive consumers match the painted DOM.
+  // Adopt whatever the pre-hydration script resolved (stored choice, else
+  // dark) so reactive consumers match the painted DOM.
   onMounted(() => {
     const current = document.documentElement.dataset.theme
     theme.value = current === 'light' ? 'light' : 'dark'

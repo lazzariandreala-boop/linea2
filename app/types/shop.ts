@@ -18,6 +18,11 @@ export interface CartItem {
   image: string | null
   imageAlt: string | null
   quantity: number
+  /** Made-to-order lines (the Stella configurator): human summary of the
+   *  chosen options, e.g. "Deep Indigo + Vintage Light Blue · Floral Silk". */
+  details?: string
+  /** Where the line links back to; defaults to the product page. */
+  link?: string
 }
 
 /** Shipping destination. Also editable straight from the cart. */

@@ -71,6 +71,15 @@ export function useCart() {
     return true
   }
 
+  /** Add a ready-made line (e.g. a configured Stella bag). Lines with the same
+   *  id (same configuration) merge their quantities. */
+  function addLine(line: CartItem) {
+    const existing = items.value.find((i) => i.id === line.id)
+    if (existing) existing.quantity += line.quantity
+    else items.value.push({ ...line })
+    persist()
+  }
+
   function setQuantity(id: string, quantity: number) {
     const q = Math.max(1, Math.floor(quantity))
     const item = items.value.find((i) => i.id === id)
@@ -146,5 +155,5 @@ export function useCart() {
     )
   }
 
-  return { items, count, subtotal, isEmpty, add, setQuantity, remove, clear }
+  return { items, count, subtotal, isEmpty, add, addLine, setQuantity, remove, clear }
 }

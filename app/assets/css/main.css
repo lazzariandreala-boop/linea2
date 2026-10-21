@@ -2,69 +2,78 @@
 
 /*
  * ───────────────────────────────────────────────────────────────────────
- * Linea 2 — design system (upcycling · DARK PREMIUM / TikTok-pop)
- * Near-black canvas, off-white ink, one electric-lime accent, with depth:
- * glass surfaces, glow, floating gradient orbs and CSS 3D tilt. SEMANTIC
- * tokens (bg/surface/fg/primary/accent) drive every utility. No web fonts on
- * purpose: a tuned system stack = zero font-CLS + instant first paint in the
- * TikTok in-app webview.
+ * Linea 2 — "Stella" design system (luxury · upcycled · sustainable)
+ * Charcoal canvas, warm off-white ink, one brass accent; denim blues
+ * (selvedge / wash / raw) as supporting tones. Serif display (Cinzel) in
+ * uppercase with wide tracking, Inter for UI, JetBrains Mono for metadata.
+ * SEMANTIC tokens (bg/surface/fg/primary/accent) drive every utility.
  * ───────────────────────────────────────────────────────────────────────
  */
 @theme {
+  /* Denim palette (from the Linea 2 design system) */
+  --color-selvedge: #1a2238;
+  --color-wash: #2b3a67;
+  --color-raw: #0d1117;
+  --color-parchment: #f9f9fb;
+  --color-brass: #967d59;
+  --color-brass-hi: #c2a675;
+  --color-pewter: #585c66;
+  --color-cream: #f1ece2;
+
   /* Surfaces & ink */
-  --color-bg: #0e0e10; /* near-black canvas */
-  --color-surface: #17171a; /* raised cards / inputs */
-  --color-surface-2: #202024; /* sunken panels / image placeholder */
-  --color-fg: #f4f3ee; /* off-white text */
+  --color-bg: #262523; /* charcoal canvas (as in the Stella mockup) */
+  --color-surface: #1e1d1c; /* raised cards / inputs */
+  --color-surface-2: #33312d; /* sunken panels / image placeholder */
+  --color-fg: #eeeae3; /* warm off-white text */
+  --color-muted: #a9a49b;
 
   /* Brand */
-  --color-primary: #c084fc; /* orchid violet — primary actions/accent */
-  --color-primary-strong: #a855f7; /* hover */
-  --color-on-primary: #0e0e10; /* near-black text on violet */
-  --color-accent: #c084fc; /* violet — text pops / eyebrows / price */
-  --color-accent-strong: #9333ea;
-  --color-accent-2: #f472b6; /* pink companion — orbs / gradients only */
-  --color-gold: #e2c15a; /* warm highlight (tutorial result badge) */
+  --color-primary: #f1ece2; /* cream pill buttons */
+  --color-primary-strong: #ffffff; /* hover */
+  --color-on-primary: #0d1117; /* raw ink on cream */
+  --color-accent: #c2a675; /* brass — eyebrows / price / active nav */
+  --color-accent-strong: #967d59;
+  --color-accent-2: #967d59; /* deeper brass — decorative lines */
+  --color-gold: #c2a675;
 
-  /* Type — system stacks, weighted for editorial contrast */
-  --font-body:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
-    Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
-  --font-display:
-    'Avenir Next', 'Helvetica Neue', ui-sans-serif, system-ui, -apple-system,
-    'Segoe UI', Roboto, sans-serif;
+  /* Type */
+  --font-body: 'Inter Variable', 'Inter', 'Helvetica Neue', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-logo: 'Cormorant Garamond', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
 
   /* Fluid type scale (mobile-first, clamp-based) */
-  --text-eyebrow: 0.78rem;
+  --text-eyebrow: 0.72rem;
   --text-eyebrow--line-height: 1.1;
-  --text-eyebrow--letter-spacing: 0.22em;
+  --text-eyebrow--letter-spacing: 0.18em;
 
-  --text-hero: clamp(2.9rem, 9.5vw, 7rem);
-  --text-hero--line-height: 0.92;
-  --text-hero--letter-spacing: -0.035em;
+  --text-hero: clamp(2.2rem, 6vw, 4.6rem);
+  --text-hero--line-height: 1.04;
+  --text-hero--letter-spacing: 0.04em;
 
-  --text-display: clamp(2rem, 6vw, 4.25rem);
-  --text-display--line-height: 1.0;
-  --text-display--letter-spacing: -0.03em;
+  --text-display: clamp(1.7rem, 4.2vw, 3rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: 0.06em;
 
-  --text-title: clamp(1.5rem, 3.5vw, 2.35rem);
-  --text-title--line-height: 1.06;
-  --text-title--letter-spacing: -0.02em;
+  --text-title: clamp(1.2rem, 2.6vw, 1.7rem);
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: 0.06em;
 
-  --text-lead: clamp(1.05rem, 2.2vw, 1.35rem);
-  --text-lead--line-height: 1.5;
+  --text-lead: clamp(1rem, 1.8vw, 1.2rem);
+  --text-lead--line-height: 1.55;
 
   /* Radii */
-  --radius-card: 1.5rem;
+  --radius-card: 14px;
+  --radius-panel: 22px;
   --radius-pill: 999px;
 
   /* Easing */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
 
-  /* Shadows (deep, for the dark canvas) */
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 20px 44px -18px rgb(0 0 0 / 0.7);
-  --shadow-float: 0 44px 90px -30px rgb(0 0 0 / 0.85);
+  /* Shadows */
+  --shadow-card: 0 12px 32px -4px rgb(13 17 23 / 0.35), 0 4px 12px -2px rgb(13 17 23 / 0.2);
+  --shadow-float: 0 44px 90px -30px rgb(0 0 0 / 0.75);
 }
 
 @layer base {
@@ -77,31 +86,28 @@
   }
 
   /*
-   * LIGHT THEME — opt-in via [data-theme='light'] on <html> (set by useTheme()
-   * + the no-FOUC inline script in nuxt.config). Only the semantic tokens are
-   * re-pointed: every utility (bg-bg, text-fg, .glass, .glow-accent…) already
-   * resolves through these vars, so the whole UI re-skins with no per-component
-   * change. Violet is deepened for AA contrast on a light canvas; the pink/gold
-   * companions live only in orbs/gradients and stay as-is.
+   * LIGHT THEME: opt-in via [data-theme='light'] on <html> (set by useTheme()
+   * + the no-FOUC inline script in nuxt.config). Parchment canvas from the
+   * design system; selvedge ink for primary actions, brass stays the accent.
    */
   :root[data-theme='light'] {
     color-scheme: light;
 
-    --color-bg: #f6f5f1; /* warm off-white canvas */
-    --color-surface: #ffffff; /* raised cards / inputs */
-    --color-surface-2: #eceae2; /* sunken panels / image placeholder */
-    --color-fg: #1b1b1f; /* near-black ink */
+    --color-bg: #f9f9fb; /* parchment */
+    --color-surface: #ffffff;
+    --color-surface-2: #eceef2;
+    --color-fg: #0d1117;
+    --color-muted: #585c66;
 
-    --color-primary: #9333ea; /* deeper violet — legible on light */
-    --color-primary-strong: #7e22ce; /* hover */
-    --color-on-primary: #ffffff; /* white text on violet */
-    --color-accent: #7c3aed; /* readable violet for text pops / price */
-    --color-accent-strong: #6d28d9;
+    --color-primary: #1a2238; /* selvedge */
+    --color-primary-strong: #2b3a67; /* wash */
+    --color-on-primary: #f9f9fb;
+    --color-accent: #7d6747; /* brass, darkened for AA on parchment */
+    --color-accent-strong: #967d59;
 
-    /* Softer, tinted shadows for the light canvas */
-    --shadow-card: 0 1px 2px rgb(24 24 27 / 0.06), 0 18px 40px -20px rgb(24 24 27 / 0.18);
-    --shadow-float: 0 40px 80px -32px rgb(24 24 27 / 0.28);
-    --shadow-input: 0 1px 2px rgb(24 24 27 / 0.06), 0 8px 20px -10px rgb(24 24 27 / 0.18);
+    --shadow-card: 0 1px 2px rgb(13 17 23 / 0.06), 0 18px 40px -20px rgb(13 17 23 / 0.18);
+    --shadow-float: 0 40px 80px -32px rgb(13 17 23 / 0.28);
+    --shadow-input: 0 1px 2px rgb(13 17 23 / 0.06), 0 8px 20px -10px rgb(13 17 23 / 0.18);
   }
 
   html {
@@ -114,6 +120,7 @@
     background-color: var(--color-bg);
     color: var(--color-fg);
     font-family: var(--font-body);
+    letter-spacing: -0.011em;
     font-synthesis-weight: none;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -126,7 +133,8 @@
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 500;
+    text-transform: uppercase;
     text-wrap: balance;
   }
 
@@ -136,7 +144,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 1.5px solid var(--color-accent);
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -179,43 +187,41 @@
     box-shadow: 0 16px 48px -14px color-mix(in oklab, var(--color-primary) 55%, transparent);
   }
 
-  /* Dark base washes (orbs add the colour on top): violet + pink */
+  /* Base washes: denim blue + brass tints over the charcoal canvas */
   .wash-hero {
     background:
-      radial-gradient(120% 90% at 82% 0%, rgb(192 132 252 / 0.14), transparent 55%),
-      radial-gradient(130% 120% at 0% 100%, rgb(244 114 182 / 0.14), transparent 60%),
-      linear-gradient(180deg, #141417 0%, #0e0e10 60%);
+      radial-gradient(120% 90% at 82% 0%, rgb(43 58 103 / 0.32), transparent 55%),
+      radial-gradient(130% 120% at 0% 100%, rgb(150 125 89 / 0.16), transparent 60%),
+      linear-gradient(180deg, #2a2926 0%, #262523 60%);
   }
   .wash-soft {
     background:
-      radial-gradient(100% 80% at 100% 0%, rgb(192 132 252 / 0.07), transparent 60%),
-      radial-gradient(90% 90% at 0% 100%, rgb(244 114 182 / 0.07), transparent 60%),
+      radial-gradient(100% 80% at 100% 0%, rgb(43 58 103 / 0.16), transparent 60%),
+      radial-gradient(90% 90% at 0% 100%, rgb(150 125 89 / 0.08), transparent 60%),
       var(--color-bg);
   }
   .wash-glow {
     background:
-      radial-gradient(120% 90% at 78% 8%, rgb(192 132 252 / 0.18), transparent 55%),
-      radial-gradient(130% 120% at 12% 100%, rgb(244 114 182 / 0.18), transparent 60%);
+      radial-gradient(120% 90% at 78% 8%, rgb(43 58 103 / 0.3), transparent 55%),
+      radial-gradient(130% 120% at 12% 100%, rgb(150 125 89 / 0.18), transparent 60%);
   }
 
-  /* Light-theme washes: the base gradients above bake in dark hex, so re-point
-     them to the light canvas with gentler brand tints. */
   :root[data-theme='light'] .wash-hero {
     background:
-      radial-gradient(120% 90% at 82% 0%, rgb(147 51 234 / 0.1), transparent 55%),
-      radial-gradient(130% 120% at 0% 100%, rgb(244 114 182 / 0.1), transparent 60%),
-      linear-gradient(180deg, #ffffff 0%, #f6f5f1 60%);
+      radial-gradient(120% 90% at 82% 0%, rgb(43 58 103 / 0.1), transparent 55%),
+      radial-gradient(130% 120% at 0% 100%, rgb(150 125 89 / 0.1), transparent 60%),
+      linear-gradient(180deg, #ffffff 0%, #f9f9fb 60%);
   }
   :root[data-theme='light'] .wash-soft {
     background:
-      radial-gradient(100% 80% at 100% 0%, rgb(147 51 234 / 0.06), transparent 60%),
-      radial-gradient(90% 90% at 0% 100%, rgb(244 114 182 / 0.06), transparent 60%),
+      radial-gradient(100% 80% at 100% 0%, rgb(43 58 103 / 0.06), transparent 60%),
+      radial-gradient(90% 90% at 0% 100%, rgb(150 125 89 / 0.06), transparent 60%),
       var(--color-bg);
   }
   :root[data-theme='light'] .wash-glow {
     background:
-      radial-gradient(120% 90% at 78% 8%, rgb(147 51 234 / 0.12), transparent 55%),
-      radial-gradient(130% 120% at 12% 100%, rgb(244 114 182 / 0.12), transparent 60%);
+      radial-gradient(120% 90% at 78% 8%, rgb(43 58 103 / 0.1), transparent 55%),
+      radial-gradient(130% 120% at 12% 100%, rgb(150 125 89 / 0.1), transparent 60%);
   }
 
   /* Horizontal scroll rails without scrollbars (mobile chips, feeds) */
@@ -232,7 +238,35 @@
     line-height: var(--text-eyebrow--line-height);
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 500;
+  }
+
+  /* Glass inspector panel (design system: frosted dock over the canvas) */
+  .panel-glass {
+    background: rgb(30 29 28 / 0.78);
+    border: 1px solid rgb(255 255 255 / 0.16);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+  }
+  :root[data-theme='light'] .panel-glass {
+    background: rgb(255 255 255 / 0.85);
+    border-color: #e2e4e9;
+  }
+
+  /* Uppercase tracked label used for nav, pills and tabs */
+  .label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 400;
+  }
+
+  /* Brass decorative line art (header corners, section dividers) */
+  .deco-lines path {
+    fill: none;
+    stroke: var(--color-brass);
+    stroke-width: 0.6;
+    opacity: 0.45;
   }
 
   /* ── Form controls ──────────────────────────────────────────────────────
@@ -286,6 +320,7 @@
   .btn-solid {
     background-color: var(--color-primary);
     color: var(--color-on-primary);
+    letter-spacing: 0.06em;
     box-shadow: var(--shadow-input);
   }
   .btn-solid:hover {

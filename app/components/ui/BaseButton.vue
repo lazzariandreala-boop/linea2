@@ -27,14 +27,14 @@ const tag = computed(() =>
 
 const VARIANTS: Record<string, string> = {
   solid: 'btn-solid',
-  outline: 'btn-soft text-fg',
+  outline: 'border border-fg/35 text-fg hover:border-fg/70 hover:bg-fg/5',
   ghost: 'text-fg hover:bg-fg/8',
 }
 
 const SIZES: Record<string, string> = {
-  sm: 'px-4 py-2 text-sm min-h-[40px]',
-  md: 'px-6 py-3 text-base min-h-[48px]',
-  lg: 'px-7 py-3.5 text-lg min-h-[52px]',
+  sm: 'px-4 py-2 text-xs min-h-[40px]',
+  md: 'px-6 py-3 text-[13px] min-h-[44px]',
+  lg: 'px-7 py-3.5 text-[13.5px] min-h-[48px]',
 }
 </script>
 
@@ -46,7 +46,7 @@ const SIZES: Record<string, string> = {
     :target="target"
     :rel="rel"
     :type="tag === 'button' ? type : undefined"
-    class="inline-flex select-none items-center justify-center gap-2 rounded-pill font-semibold transition-[transform,background-color,border-color] duration-200 ease-out-soft active:scale-[0.97]"
+    class="inline-flex select-none items-center justify-center gap-2 rounded-pill uppercase tracking-[0.06em] transition-[transform,background-color,border-color] duration-200 ease-out-soft active:scale-[0.97]"
     :class="[VARIANTS[variant], SIZES[size], block ? 'w-full' : '']"
   >
     <slot />

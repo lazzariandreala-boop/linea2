@@ -2,7 +2,7 @@
 import type { ProductCategory } from '~/types/content'
 import type { SortKey } from '~/types/ui'
 
-const props = defineProps<{ category: ProductCategory }>()
+const props = defineProps<{ category?: ProductCategory }>()
 
 const { t } = useT()
 const { products } = await useProducts({ category: props.category, pageSize: 100 })
@@ -26,18 +26,29 @@ const displayed = computed(() => {
 })
 
 // UI copy per category (would move to i18n messages in a full i18n setup).
-const DESCRIPTIONS: Record<ProductCategory, string> = {
+const DESCRIPTIONS: Record<ProductCategory | 'all', string> = {
+  all: 'Borse e accessori cuciti a mano da jeans recuperati. Ogni pezzo esiste una volta sola.',
   accessories: 'Foulard, cinture e occhiali pensati per durare e distinguersi.',
   bags: 'Borse fatte a mano, dalla tote di tutti i giorni alla pochette da sera.',
 }
+const description = DESCRIPTIONS[props.category ?? 'all']
 
-const title = computed(() =>
-  props.category === 'accessories' ? t((m) => m.nav.accessories) : t((m) => m.nav.bags),
-)
+const title = computed(() => {
+  if (props.category === 'accessories') return t((m) => m.nav.accessories)
+  if (props.category === 'bags') return t((m) => m.nav.bags)
+  return 'The collection'
+})
+
+// Category chips (links, so each filter keeps its own URL).
+const chips: { to: string; label: string; active: boolean }[] = [
+  { to: '/shop', label: 'All', active: !props.category },
+  { to: '/bags', label: t((m) => m.nav.bags), active: props.category === 'bags' },
+  { to: '/accessories', label: t((m) => m.nav.accessories), active: props.category === 'accessories' },
+]
 
 useSeoHead({
   title: title.value,
-  description: DESCRIPTIONS[props.category],
+  description,
   image: products.value[0]?.gallery[0]?.url ?? null,
   imageAlt: title.value,
 })
@@ -46,8 +57,27 @@ useSeoHead({
 <template>
   <div class="site-container py-12 sm:py-16">
     <UiReveal>
-      <UiSectionHeading eyebrow="Catalogo" :title="title" :subtitle="DESCRIPTIONS[category]" as="h1" />
+      <UiSectionHeading eyebrow="Shop" :title="title" :subtitle="description" as="h1" />
     </UiReveal>
+
+    <nav class="mt-6 flex flex-wrap gap-2" aria-label="Categorie">
+      <NuxtLink
+        v-for="chip in chips"
+        :key="chip.to"
+        :to="chip.to"
+        class="label-caps rounded-pill border px-4 py-2 text-xs transition-colors"
+        :class="chip.active ? 'border-brass-hi text-brass-hi' : 'border-fg/20 text-fg/75 hover:border-fg/50 hover:text-fg'"
+        :aria-current="chip.active ? 'page' : undefined"
+      >
+        {{ chip.label }}
+      </NuxtLink>
+      <NuxtLink
+        to="/customize"
+        class="label-caps rounded-pill bg-primary px-4 py-2 text-xs text-on-primary transition-colors hover:bg-primary-strong"
+      >
+        Customize your bag
+      </NuxtLink>
+    </nav>
 
     <div class="mt-8">
       <FilterSortBar v-model:sort="sort" v-model:tag="tag" :tags="tags" :count="displayed.length" />
