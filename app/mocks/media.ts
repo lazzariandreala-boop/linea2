@@ -16,6 +16,11 @@ export const MOCK_TS = '2025-05-01T09:00:00.000Z'
 
 let mediaIdSeq = 1000
 
+/** `.jpg` for the rendered art, `.png` for generated placeholders. */
+function fileType(fileName: string): { ext: string; mime: string } {
+  return /\.jpe?g$/i.test(fileName) ? { ext: '.jpg', mime: 'image/jpeg' } : { ext: '.png', mime: 'image/png' }
+}
+
 const BREAKPOINTS: { key: string; size: number }[] = [
   { key: 'thumbnail', size: 245 },
   { key: 'small', size: 500 },
@@ -46,8 +51,7 @@ function buildFormat(
   return {
     name: `${key}_${fileName}`,
     hash: `${key}_${slugifyDocId(fileName)}`,
-    ext: '.png',
-    mime: 'image/png',
+    ...fileType(fileName),
     path: null,
     width: w,
     height: h,
@@ -83,8 +87,7 @@ export function media(
     height,
     formats: Object.keys(formats).length ? formats : null,
     hash: slugifyDocId(fileName),
-    ext: '.png',
-    mime: 'image/png',
+    ...fileType(fileName),
     size: Number(((width * height) / 4000).toFixed(2)),
     url: `/uploads/${fileName}`,
     previewUrl: null,

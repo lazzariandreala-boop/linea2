@@ -21,7 +21,7 @@ function expectV5Media(media: StrapiMedia) {
   expect(media.url.startsWith('/uploads/')).toBe(true)
   expect(typeof media.width).toBe('number')
   expect(typeof media.height).toBe('number')
-  expect(media.mime).toBe('image/png')
+  expect(['image/png', 'image/jpeg']).toContain(media.mime)
   // formats present for a large source, each with a relative url.
   expect(media.formats).toBeTruthy()
   for (const fmt of Object.values(media.formats ?? {})) {

@@ -374,7 +374,8 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
         if (pending) applyModel(pending)
         opts.onReady?.(true)
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        console.error(`[configurator] ${bag.url} failed to load`, err)
         if (!disposed && wanted === bag.id) opts.onReady?.(false)
       })
   }

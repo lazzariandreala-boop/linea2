@@ -4,10 +4,15 @@
  * intrinsic dimensions, so the mock experience has true LCP imagery and zero
  * external network requests. Filenames here must match app/mocks/*.
  *
+ * Product, video and tutorial images in public/uploads are now provisional
+ * JPEG art rendered from the 3D models and the fabric painters, so only the
+ * remaining PNG placeholders are listed here. Existing files are kept; pass
+ * --force to overwrite.
+ *
  * Run: `npm run gen:placeholders`
  */
 import { deflateSync } from 'node:zlib'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -112,39 +117,13 @@ const C = {
 const IMAGES = [
   // Home
   ['hero-linea2_3f9c21.png', 1600, 1000, C.violet, C.ink],
-  ['og-default_8a1d44.png', 1200, 630, C.violet, C.pinkDeep],
-  // Accessories
-  ['foulard-seta_a11.png', 900, 1200, C.violet, C.pinkDeep],
-  ['foulard-seta_a12.png', 900, 1200, C.pink, C.ink],
-  ['cintura-pelle_b21.png', 900, 1200, C.charcoal, C.violet],
-  ['cintura-pelle_b22.png', 900, 1200, C.indigo, C.ink],
-  ['occhiali-sole_c31.png', 900, 1200, C.violet, C.ink],
-  ['occhiali-sole_c32.png', 900, 1200, C.pink, C.charcoal],
-  // Bags
-  ['borsa-tote_d41.png', 900, 1200, C.indigo, C.ink],
-  ['borsa-tote_d42.png', 900, 1200, C.violetDeep, C.ink],
-  ['borsa-tracolla_e51.png', 900, 1200, C.violet, C.ink],
-  ['borsa-tracolla_e52.png', 900, 1200, C.pink, C.charcoal],
-  ['pochette-sera_f61.png', 900, 1200, C.violetDeep, C.pink],
-  ['pochette-sera_f62.png', 900, 1200, C.ink, C.indigo],
-  // TikTok posters (9:16)
-  ['tiktok-unboxing_t01.png', 720, 1280, C.violet, C.ink],
-  ['tiktok-styling_t02.png', 720, 1280, C.pink, C.violetDeep],
-  ['tiktok-dietro_t03.png', 720, 1280, C.indigo, C.ink],
-  ['tiktok-nuovi-arrivi_t04.png', 720, 1280, C.violetDeep, C.ink],
-  // Tutorials — final-result hooks (4:3)
-  ['tut-foulard-finale_u01.png', 1200, 900, C.violet, C.pinkDeep],
-  ['tut-borsa-cura_u02.png', 1200, 900, C.indigo, C.ink],
-  ['tut-look-finale_u03.png', 1200, 900, C.pink, C.violetDeep],
-  // Tutorial step images (4:3)
-  ['tut-foulard-step_s01.png', 800, 600, C.violet, C.pink],
-  ['tut-borsa-step_s02.png', 800, 600, C.indigo, C.ink],
-  ['tut-look-step_s03.png', 800, 600, C.pink, C.violetDeep],
 ]
 
 mkdirSync(OUT_DIR, { recursive: true })
 let total = 0
+const force = process.argv.includes('--force')
 for (const [name, w, h, top, bottom] of IMAGES) {
+  if (!force && existsSync(join(OUT_DIR, name))) continue
   const png = gradientPng(w, h, top, bottom)
   writeFileSync(join(OUT_DIR, name), png)
   total += png.length
