@@ -10,6 +10,10 @@ export interface Messages {
   brand: { tagline: string }
   nav: {
     home: string
+    shop: string
+    customize: string
+    editorial: string
+    studio: string
     accessories: string
     bags: string
     tiktok: string
@@ -112,6 +116,10 @@ export const messages: Record<Locale, Messages> = {
     brand: { tagline: 'Accessori e borse in upcycling' },
     nav: {
       home: 'Home',
+      shop: 'Shop',
+      customize: 'Customize',
+      editorial: 'Editorial',
+      studio: 'Studio',
       accessories: 'Accessori',
       bags: 'Borse',
       tiktok: 'TikTok',
@@ -219,6 +227,10 @@ export const messages: Record<Locale, Messages> = {
     brand: { tagline: 'Upcycled accessories & bags' },
     nav: {
       home: 'Home',
+      shop: 'Shop',
+      customize: 'Customize',
+      editorial: 'Editorial',
+      studio: 'Studio',
       accessories: 'Accessories',
       bags: 'Bags',
       tiktok: 'TikTok',

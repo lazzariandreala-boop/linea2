@@ -25,7 +25,6 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 
 <template>
   <section class="relative isolate overflow-hidden wash-hero">
-    <OrbField density="hero" />
 
     <div class="site-container grid gap-12 py-20 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-32">
       <div class="max-w-xl">
@@ -33,7 +32,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
           v-motion
           :initial="{ opacity: 0, y: 14 }"
           :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }"
-          class="eyebrow glass-accent inline-flex items-center gap-2 rounded-pill px-3.5 py-1.5 text-accent"
+          class="eyebrow inline-flex items-center gap-2 text-accent"
         >
           <span class="h-1.5 w-1.5 rounded-full bg-accent" />
           {{ home.heroEyebrow }}
@@ -63,11 +62,11 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
           :enter="{ opacity: 1, y: 0, transition: { duration: 600, delay: 280 } }"
           class="mt-9 flex flex-wrap gap-3"
         >
-          <UiBaseButton to="/accessories" variant="solid" size="lg">
-            {{ t((m) => m.nav.accessories) }}
+          <UiBaseButton to="/customize" variant="solid" size="lg">
+            Customize yours
           </UiBaseButton>
-          <UiBaseButton to="/bags" variant="outline" size="lg">
-            {{ t((m) => m.nav.bags) }}
+          <UiBaseButton to="/shop" variant="outline" size="lg">
+            Shop the collection
           </UiBaseButton>
         </div>
 
@@ -93,7 +92,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
         :style="{ transform: `translate3d(0, ${offsetY}px, 0)` }"
       >
         <div
-          class="glow-accent relative overflow-hidden rounded-card shadow-float ring-1 ring-fg/10 transition-transform duration-200 ease-out-soft will-change-transform"
+          class="relative overflow-hidden rounded-card shadow-float ring-1 ring-fg/10 transition-transform duration-200 ease-out-soft will-change-transform"
           :style="tiltStyle"
           @pointermove="onPointerMove"
           @pointerleave="reset"
@@ -113,7 +112,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
         </div>
 
         <div
-          class="glass glow-accent absolute -bottom-4 -left-3 flex items-center gap-2 rounded-pill px-4 py-2 text-sm font-semibold text-fg sm:-left-5"
+          class="panel-glass absolute -bottom-4 -left-3 flex items-center gap-2 rounded-pill px-4 py-2 text-xs uppercase tracking-[0.08em] text-fg sm:-left-5"
         >
           <span class="h-2 w-2 rounded-full bg-accent" />
           Edizione limitata

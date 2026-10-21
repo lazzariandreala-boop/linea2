@@ -100,7 +100,7 @@ function onPaymentError() {
           :key="item.id"
           class="flex gap-4 rounded-card bg-surface p-3 raised"
         >
-          <NuxtLink :to="`/products/${item.slug}`" class="shrink-0 overflow-hidden rounded-2xl bg-surface-2">
+          <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="shrink-0 overflow-hidden rounded-2xl bg-surface-2">
             <img
               v-if="item.image"
               :src="item.image"
@@ -113,9 +113,10 @@ function onPaymentError() {
           </NuxtLink>
 
           <div class="flex min-w-0 flex-1 flex-col">
-            <NuxtLink :to="`/products/${item.slug}`" class="font-display font-bold text-fg hover:text-accent">
+            <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="font-display font-bold text-fg hover:text-accent">
               {{ item.title }}
             </NuxtLink>
+            <p v-if="item.details" class="mt-0.5 font-mono text-[11px] leading-snug text-fg/55">{{ item.details }}</p>
             <p class="mt-0.5 text-sm text-fg/60">{{ fmt(item.price) }}</p>
 
             <div class="mt-auto flex items-center justify-between gap-3 pt-2">

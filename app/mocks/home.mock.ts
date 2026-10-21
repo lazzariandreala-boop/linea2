@@ -6,11 +6,11 @@ import { PRODUCTS } from './products.mock'
 export const HOME_PAGE: HomePage = {
   id: 1,
   documentId: 'home_singleton',
-  heroEyebrow: 'Upcycling · Moda circolare',
-  heroHeadline: 'Dettagli che\nrinascono',
+  heroEyebrow: 'Novità · La borsa Stella',
+  heroHeadline: 'Denim ricostruito,\nsu misura',
   heroSubline:
-    'Accessori e borse in edizione limitata, creati a mano da materiali di recupero. Pezzi unici che danno nuova vita a ciò che esiste già.',
-  heroMedia: media('hero-linea2_3f9c21.png', 1600, 1000, 'Composizione di accessori e borse Linea 2'),
+    'Ogni pezzo Linea 2 nasce da un paio di jeans che nessuno indossa più. Lo smontiamo a mano e lo ricuciamo in una borsa che esiste una volta sola. Scegli lavaggio, fodera e dettagli, e guardala prendere forma in 3D.',
+  heroMedia: media('stella-hero_5e11a0.png', 1600, 1000, 'Borsa Stella in denim con toppa patchwork'),
   heroGradient: gradient('#f2643d', '#d24a26', '#4d3568', 145),
   featuredProducts: PRODUCTS.filter((p) => p.featured),
   sections: [

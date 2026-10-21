@@ -34,7 +34,17 @@ export default defineNuxtConfig({
     '@nuxt/test-utils/module',
   ],
 
-  css: ['~/assets/css/main.css'],
+  // Design-system fonts, self-hosted (no request to Google: GDPR-friendly and
+  // works in in-app webviews). Latin subsets only.
+  css: [
+    '@fontsource/cinzel/latin-500.css',
+    '@fontsource/cinzel/latin-600.css',
+    '@fontsource/cormorant-garamond/latin-500.css',
+    '@fontsource/cormorant-garamond/latin-600.css',
+    '@fontsource-variable/inter/opsz.css',
+    '@fontsource/jetbrains-mono/latin-400.css',
+    '~/assets/css/main.css',
+  ],
 
   // Tailwind v4 is wired through its first-party Vite plugin (no PostCSS step,
   // no tailwind.config.js — the design system lives in @theme in main.css).
@@ -121,18 +131,20 @@ export default defineNuxtConfig({
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover',
         },
-        { name: 'theme-color', content: '#0e0e10' },
+        { name: 'theme-color', content: '#262523' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
       script: [
         {
           // No-FOUC theme boot: set <html data-theme> before first paint from
-          // the stored choice, else the OS preference (dark-first fallback).
+          // the stored choice; dark is the brand default (Stella mockup).
           // Kept in sync at runtime by useTheme(). Must stay dependency-free.
           tagPosition: 'head',
           innerHTML:
-            "(function(){try{var k='linea2-theme',s=localStorage.getItem(k),t=s==='light'||s==='dark'?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.dataset.theme=t;}catch(e){}})();",
+            "(function(){try{var k='linea2-theme',s=localStorage.getItem(k),t=s==='light'?'light':'dark';document.documentElement.dataset.theme=t;}catch(e){}})();",
         },
       ],
     },

@@ -4,9 +4,13 @@ A modern, **mobile-first** showcase site for **Linea 2** — an *upcycling*
 accessories & bags brand (handmade from recovered materials).
 Most visitors arrive directly from **TikTok / Instagram on a phone**, so the
 experience is fast, visually striking, and degrades gracefully in in-app webviews.
-The look is a light, natural palette (kraft · sage · terracotta).
-It is a **catalog/vetrina** — product detail pages with a clear CTA (WhatsApp/DM,
-email, or external shop). **No checkout, no payments.**
+The look follows the **Stella design system**: charcoal canvas, brass accent,
+denim blues, Cinzel/Cormorant display type (dark by default, parchment light theme).
+Main sections: **Shop · Customize · Editorial · Studio**. `/customize` is a
+three.js configurator for the Stella bag (model in `public/models/stella.glb`,
+options and pricing in `app/utils/stella/`) that adds made-to-order lines to the
+cart. Cart, optional login and PayPal checkout run on Firebase (see
+[`FIREBASE_SETUP.md`](FIREBASE_SETUP.md)).
 
 ## Stack
 
@@ -87,11 +91,11 @@ scripts/gen-placeholders.mjs   no-dep PNG generator
 - **SEO / social share is a core feature** (traffic is shared links): every page
   sets `useSeoMeta` + canonical; Product/Tutorial detail pages emit OpenGraph +
   Twitter `summary_large_image` with an **absolute** representative image.
-- **No web fonts** — a tuned system stack — to guarantee zero font-CLS and
-  instant first paint. Distinctiveness comes from scale/color/gradient/motion.
+- **Self-hosted fonts** (`@fontsource`, latin subsets): Cinzel, Cormorant
+  Garamond, Inter, JetBrains Mono. No request to Google Fonts.
 - **Semantic color tokens** (`bg`/`surface`/`fg`/`primary`/`accent`) in
   [`main.css`](app/assets/css/main.css) `@theme` — retheme the whole site by
-  editing one block. Current theme: light natural (kraft · sage · terracotta).
+  editing one block. Current theme: Stella (charcoal · brass · denim).
 - **@nuxt/image provider** is set to `none` because the default IPX optimizer is
   incompatible with the current Nuxt/Nitro **nightly**; `<NuxtImg>` still enforces
   explicit dimensions + lazy-loading. Re-enable an optimizing provider for

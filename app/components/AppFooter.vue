@@ -2,6 +2,12 @@
 const { t } = useT()
 const config = useRuntimeConfig()
 const year = new Date().getFullYear()
+const LINKS = [
+  { to: '/shop', label: 'Shop' },
+  { to: '/customize', label: 'Customize' },
+  { to: '/editorial', label: 'Editorial' },
+  { to: '/studio', label: 'Studio' },
+]
 </script>
 
 <template>
@@ -9,23 +15,19 @@ const year = new Date().getFullYear()
     <div class="site-container grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
       <div class="sm:col-span-2 lg:col-span-1">
         <NuxtLink to="/" class="text-2xl text-fg">
-          <AppLogo :height="34" />
+          <AppLogo :height="34" tagline />
         </NuxtLink>
         <p class="mt-3 max-w-xs text-sm text-fg/60">{{ t((m) => m.brand.tagline) }}</p>
       </div>
 
       <nav class="flex flex-col gap-2" :aria-label="t((m) => m.nav.menu)">
-        <NuxtLink to="/accessories" class="text-sm text-fg/70 transition-colors hover:text-fg">
-          {{ t((m) => m.nav.accessories) }}
-        </NuxtLink>
-        <NuxtLink to="/bags" class="text-sm text-fg/70 transition-colors hover:text-fg">
-          {{ t((m) => m.nav.bags) }}
-        </NuxtLink>
-        <NuxtLink to="/tiktok" class="text-sm text-fg/70 transition-colors hover:text-fg">
-          {{ t((m) => m.nav.tiktok) }}
-        </NuxtLink>
-        <NuxtLink to="/tutorials" class="text-sm text-fg/70 transition-colors hover:text-fg">
-          {{ t((m) => m.nav.tutorials) }}
+        <NuxtLink
+          v-for="link in LINKS"
+          :key="link.to"
+          :to="link.to"
+          class="label-caps text-sm text-fg/70 transition-colors hover:text-brass-hi"
+        >
+          {{ link.label }}
         </NuxtLink>
       </nav>
 
@@ -34,7 +36,7 @@ const year = new Date().getFullYear()
           href="https://www.instagram.com/linea2.upcycling/"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-sm text-fg/70 transition-colors hover:text-fg"
+          class="label-caps text-sm text-fg/70 transition-colors hover:text-brass-hi"
         >
           Instagram ↗
         </a>
@@ -42,7 +44,7 @@ const year = new Date().getFullYear()
           href="https://www.tiktok.com/@linea2.upcycling"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-sm text-fg/70 transition-colors hover:text-fg"
+          class="label-caps text-sm text-fg/70 transition-colors hover:text-brass-hi"
         >
           TikTok ↗
         </a>

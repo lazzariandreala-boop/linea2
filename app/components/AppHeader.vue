@@ -31,12 +31,26 @@ interface NavLink {
   label: (m: Messages) => string
 }
 
-const links: NavLink[] = [
-  { to: '/accessories', label: (m) => m.nav.accessories },
-  { to: '/bags', label: (m) => m.nav.bags },
-  { to: '/tiktok', label: (m) => m.nav.tiktok },
-  { to: '/tutorials', label: (m) => m.nav.tutorials },
+// Main navigation from the Stella mockup. `match` keeps SHOP lit on the
+// category and product pages, and EDITORIAL on the video pages.
+const links: (NavLink & { match: string[] })[] = [
+  { to: '/shop', label: (m) => m.nav.shop, match: ['/shop', '/bags', '/accessories', '/products'] },
+  { to: '/customize', label: (m) => m.nav.customize, match: ['/customize'] },
+  { to: '/editorial', label: (m) => m.nav.editorial, match: ['/editorial', '/tiktok', '/tutorials'] },
+  { to: '/studio', label: (m) => m.nav.studio, match: ['/studio'] },
 ]
+
+function isActive(link: { match: string[] }) {
+  return link.match.some((p) => route.path === p || route.path.startsWith(`${p}/`))
+}
+
+/** Brass line art for the header's top-left corner (as in the mockup). */
+function net(w: number, h: number, step: number) {
+  let d = ''
+  for (let x = -h; x < w + h; x += step) d += `M${x} 0L${x + h} ${h}M${x} ${h}L${x + h} 0`
+  return d
+}
+const decoPath = `${net(620, 150, 34)}M220 150L360 10L500 150M250 150L360 40L470 150`
 
 // Close menus on navigation.
 watch(() => route.fullPath, () => {
@@ -55,79 +69,53 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 border-b border-fg/10 bg-bg/80 backdrop-blur-md">
-    <div class="site-container flex h-16 items-center justify-between gap-4">
-      <NuxtLink to="/" class="text-xl text-fg" :aria-label="`${t((m) => m.nav.home)} — Linea 2`">
-        <AppLogo :height="26" />
+  <header class="sticky top-0 z-50 border-b border-fg/10 bg-bg/85 backdrop-blur-md">
+    <svg
+      class="deco-lines pointer-events-none absolute -left-10 top-0 hidden h-[150px] w-[620px] lg:block"
+      viewBox="0 0 620 150"
+      aria-hidden="true"
+    >
+      <path :d="decoPath" />
+    </svg>
+
+    <div class="site-container relative grid h-20 grid-cols-[1fr_auto] items-center gap-4 md:grid-cols-[1fr_auto_1fr] md:h-24">
+      <NuxtLink to="/" class="w-max text-fg" :aria-label="`${t((m) => m.nav.home)} — Linea 2`">
+        <AppLogo :height="36" tagline />
       </NuxtLink>
 
-      <div class="flex items-center gap-1">
-        <!-- Desktop nav -->
-        <nav class="hidden items-center gap-1 md:flex" :aria-label="t((m) => m.nav.menu)">
-          <NuxtLink
-            v-for="link in links"
-            :key="link.to"
-            :to="link.to"
-            class="rounded-pill px-4 py-2 text-sm font-medium text-fg/65 transition-colors hover:text-fg"
-            active-class="!text-accent"
-          >
-            {{ t(link.label) }}
-          </NuxtLink>
-        </nav>
-
-        <!-- Theme toggle (always visible, large tap target) -->
-        <button
-          type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full text-fg/65 transition-colors hover:text-fg"
-          :aria-label="theme === 'dark' ? t((m) => m.nav.lightMode) : t((m) => m.nav.darkMode)"
-          :title="theme === 'dark' ? t((m) => m.nav.lightMode) : t((m) => m.nav.darkMode)"
-          @click="toggle"
-        >
-          <!-- Sun (shown in dark mode → click for light) -->
-          <svg v-if="theme === 'dark'" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-          </svg>
-          <!-- Moon (shown in light mode → click for dark) -->
-          <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        </button>
-
-        <!-- Cart (with live item-count badge) -->
+      <!-- Desktop nav -->
+      <nav class="hidden items-center gap-8 md:flex lg:gap-[34px]" :aria-label="t((m) => m.nav.menu)">
         <NuxtLink
-          to="/cart"
-          class="relative inline-flex h-11 w-11 items-center justify-center rounded-full text-fg/65 transition-colors hover:text-fg"
-          :aria-label="t((m) => m.nav.cart)"
+          v-for="link in links"
+          :key="link.to"
+          :to="link.to"
+          class="label-caps text-[14.5px] text-fg transition-colors hover:text-brass-hi"
+          :class="{ '!text-brass-hi': isActive(link) }"
+          :aria-current="isActive(link) ? 'page' : undefined"
         >
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 6h15l-1.5 9h-12z" />
-            <path d="M6 6 5 3H2" />
-            <circle cx="9" cy="20" r="1" />
-            <circle cx="18" cy="20" r="1" />
-          </svg>
-          <span
-            v-if="count > 0"
-            class="absolute -right-0.5 -top-0.5 inline-flex min-w-4.5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-4.5 text-on-primary"
-            aria-hidden="true"
-          >
-            {{ count }}
-          </span>
+          {{ t(link.label) }}
         </NuxtLink>
+      </nav>
 
-        <!-- Profile avatar: opens login modal (guest) or account menu (signed in) -->
+      <div class="flex items-center justify-end gap-1 sm:gap-3">
+        <!-- Account: opens login modal (guest) or account menu (signed in) -->
         <div class="relative">
           <button
             type="button"
-            class="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full ring-1 ring-fg/15 transition-shadow hover:ring-primary/50"
-            :class="isLoggedIn ? 'bg-primary text-on-primary' : 'bg-surface-2 text-fg/70'"
+            class="label-caps inline-flex h-11 items-center gap-2 px-1 text-[14.5px] text-fg transition-colors hover:text-brass-hi"
             :aria-label="isLoggedIn ? t((m) => m.nav.account) : t((m) => m.nav.signIn)"
             :aria-expanded="isLoggedIn ? accountOpen : undefined"
             @click="onAvatarClick"
           >
-            <img v-if="user?.photoURL" :src="user.photoURL" alt="" class="h-full w-full object-cover" referrerpolicy="no-referrer" />
-            <span v-else-if="isLoggedIn" class="text-sm font-bold">{{ initial }}</span>
-            <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <span
+              v-if="isLoggedIn"
+              class="inline-flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-selvedge text-xs text-brass-hi ring-1 ring-brass/60"
+            >
+              <img v-if="user?.photoURL" :src="user.photoURL" alt="" class="h-full w-full object-cover" referrerpolicy="no-referrer" />
+              <span v-else>{{ initial }}</span>
+            </span>
+            <span class="hidden sm:inline">Account</span>
+            <svg v-if="!isLoggedIn" class="h-5 w-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
               <circle cx="12" cy="8" r="4" />
               <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
             </svg>
@@ -139,24 +127,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             <Transition name="menu">
               <div
                 v-if="accountOpen"
-                class="glass absolute right-0 z-50 mt-2 w-52 rounded-2xl p-1.5 shadow-float"
+                class="panel-glass absolute right-0 z-50 mt-2 w-56 rounded-2xl p-1.5"
               >
-                <p class="truncate px-3 py-2 text-xs text-fg/50">{{ user?.email }}</p>
+                <p class="truncate px-3 py-2 font-mono text-[11px] text-fg/55">{{ user?.email }}</p>
                 <NuxtLink
                   to="/account"
-                  class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-fg/80 transition-colors hover:bg-fg/8 hover:text-fg"
+                  class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-fg/85 transition-colors hover:bg-fg/8 hover:text-fg"
                 >
                   {{ t((m) => m.nav.account) }}
                 </NuxtLink>
                 <NuxtLink
                   to="/cart"
-                  class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-fg/80 transition-colors hover:bg-fg/8 hover:text-fg"
+                  class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-fg/85 transition-colors hover:bg-fg/8 hover:text-fg"
                 >
                   {{ t((m) => m.nav.cart) }}
                 </NuxtLink>
                 <button
                   type="button"
-                  class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-accent-2 transition-colors hover:bg-fg/8"
+                  class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-brass-hi transition-colors hover:bg-fg/8"
                   @click="onLogout"
                 >
                   {{ t((m) => m.auth.signOut) }}
@@ -166,7 +154,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </template>
         </div>
 
-        <!-- Mobile menu toggle (large tap target) -->
+        <!-- Bag with live item count -->
+        <NuxtLink
+          to="/cart"
+          class="label-caps inline-flex h-11 items-center px-1 text-[14.5px] text-fg transition-colors hover:text-brass-hi"
+          active-class="!text-brass-hi"
+          :aria-label="`${t((m) => m.nav.cart)} (${count})`"
+        >
+          Bag ({{ count }})
+        </NuxtLink>
+
+        <!-- Theme toggle -->
+        <button
+          type="button"
+          class="hidden h-9 w-9 items-center justify-center rounded-full text-fg/60 transition-colors hover:text-brass-hi sm:inline-flex"
+          :aria-label="theme === 'dark' ? t((m) => m.nav.lightMode) : t((m) => m.nav.darkMode)"
+          :title="theme === 'dark' ? t((m) => m.nav.lightMode) : t((m) => m.nav.darkMode)"
+          @click="toggle"
+        >
+          <svg v-if="theme === 'dark'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+          <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+
+        <!-- Mobile menu toggle -->
         <button
           type="button"
           class="-mr-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-fg md:hidden"
@@ -175,10 +190,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           :aria-label="open ? t((m) => m.nav.close) : t((m) => m.nav.menu)"
           @click="open = !open"
         >
-          <svg v-if="!open" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg v-if="!open" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
-          <svg v-else class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg v-else class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
             <path d="m6 6 12 12M18 6 6 18" />
           </svg>
         </button>
@@ -198,11 +213,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             v-for="link in links"
             :key="link.to"
             :to="link.to"
-            class="flex min-h-[52px] items-center text-lg font-medium text-fg/80 transition-colors hover:text-fg"
-            active-class="!text-accent"
+            class="label-caps flex min-h-[52px] items-center text-base text-fg/85 transition-colors hover:text-brass-hi"
+            :class="{ '!text-brass-hi': isActive(link) }"
           >
             {{ t(link.label) }}
           </NuxtLink>
+          <button
+            type="button"
+            class="label-caps flex min-h-[52px] items-center text-left text-base text-fg/60"
+            @click="toggle"
+          >
+            {{ theme === 'dark' ? t((m) => m.nav.lightMode) : t((m) => m.nav.darkMode) }}
+          </button>
         </div>
       </nav>
     </Transition>

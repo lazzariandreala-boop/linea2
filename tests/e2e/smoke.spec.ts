@@ -11,7 +11,7 @@ async function withErrorTracking(page: Page, run: () => Promise<void>) {
   return errors
 }
 
-const ROUTES = ['/', '/accessories', '/bags', '/tiktok', '/tutorials']
+const ROUTES = ['/', '/shop', '/customize', '/editorial', '/studio', '/accessories', '/bags', '/tiktok', '/tutorials']
 
 for (const route of ROUTES) {
   test(`loads ${route} without console errors and renders content`, async ({ page }) => {
@@ -66,4 +66,14 @@ test('TikTok facade does NOT load embed.js until interaction', async ({ page }) 
     play.click(),
   ])
   expect(embedReq.url()).toContain('tiktok.com/embed.js')
+})
+
+test('customize: picking options updates the price and adds the bag to the cart', async ({ page }) => {
+  await page.goto('/customize')
+  const price = page.locator('.price')
+  await expect(price).toHaveText('€410.00')
+  await page.getByRole('button', { name: /Street Art/ }).click()
+  await expect(price).toHaveText('€415.00')
+  await page.getByRole('button', { name: 'ADD TO BAG' }).click()
+  await expect(page.getByRole('link', { name: /Carrello \(1\)/ })).toBeVisible()
 })

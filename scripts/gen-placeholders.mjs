@@ -96,15 +96,15 @@ function gradientPng(width, height, topHex, bottomHex) {
   ])
 }
 
-// Brand palette — dark premium, violet + pink (matches the dark theme tokens)
+// Brand palette — Stella denim + brass (key names kept from the first theme)
 const C = {
-  ink: '#0e0e10',
-  charcoal: '#202024',
-  violet: '#c084fc',
-  violetDeep: '#7c3aed',
-  pink: '#f472b6',
-  pinkDeep: '#be3a8e',
-  indigo: '#6d5ef0',
+  ink: '#262523',
+  charcoal: '#33312d',
+  violet: '#2b3a67',
+  violetDeep: '#1a2238',
+  pink: '#967d59',
+  pinkDeep: '#5b4a33',
+  indigo: '#86a6cc',
   bone: '#f4f3ee',
 }
 
