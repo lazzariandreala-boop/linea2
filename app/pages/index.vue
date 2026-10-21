@@ -66,13 +66,16 @@ useSeoHead({
         <div class="panel-glass grid gap-6 rounded-[22px] p-6 sm:p-10 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <p class="eyebrow text-accent">Customize</p>
-            <h2 class="mt-3 text-display text-fg">Design your Stella bag</h2>
+            <h2 class="mt-3 text-display text-fg">Design your own bag</h2>
             <p class="mt-3 max-w-xl text-fg/70">
-              Scegli fino a due lavaggi di denim, la fodera, la toppa patchwork, gli accessori in metallo e le tue
+              Scegli il modello, il lavaggio del denim, la fodera, la toppa patchwork, gli accessori in metallo e le tue
               iniziali. La vedi cambiare in 3D mentre la componi, e la cuciamo su ordinazione.
             </p>
           </div>
           <UiBaseButton to="/customize" variant="solid" size="lg">Start customizing</UiBaseButton>
+          <div class="md:col-span-2">
+            <BagModelGrid />
+          </div>
         </div>
       </UiReveal>
     </section>
