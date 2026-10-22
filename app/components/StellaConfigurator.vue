@@ -12,10 +12,15 @@ import {
   LINING,
   PATCH,
   STELLA_GROUPS,
+  STELLA_INITIALS_PRICE,
+  STELLA_MAX_PATCHES,
   WASH,
+  addPatch,
   cleanInitials,
+  decodeStella,
   defaultStellaState,
   describeStella,
+  encodeStella,
   findBag,
   findOption,
   hasHardware,
@@ -24,19 +29,23 @@ import {
   stellaPrice,
   toggleWash,
   withModel,
+  type PatchSize,
   type StellaGroup,
   type StellaOption,
   type StellaState,
 } from '~/utils/stella/options'
 import { paintBackdrop, swatchURL } from '~/utils/stella/textures'
-import { createStellaScene, type StellaScene } from '~/utils/stella/scene'
+import { createStellaScene, type DecalKind, type StellaScene } from '~/utils/stella/scene'
 
 const { addLine } = useCart()
 const route = useRoute()
 const router = useRouter()
 
+// A saved design (?cfg=, e.g. from the cart) wins over a bare ?model=.
 const initialModel = typeof route.query.model === 'string' ? findBag(route.query.model).id : 'stella'
-const state = reactive<StellaState>(withModel(defaultStellaState(), initialModel))
+const saved = typeof route.query.cfg === 'string' ? decodeStella(route.query.cfg) : null
+const state = reactive<StellaState>(saved ?? defaultStellaState(initialModel))
+const snapshot = (): StellaState => JSON.parse(JSON.stringify(toRaw(state))) as StellaState
 const bag = computed(() => findBag(state.model))
 const price = computed(() => stellaPrice(state))
 
@@ -49,7 +58,7 @@ function pickModel(id: string) {
   if (id === state.model) return
   Object.assign(state, withModel(state, id))
   added.value = false
-  if (route.query.model !== id) void router.replace({ query: { ...route.query, model: id } })
+  if (route.query.model !== id) void router.replace({ query: { ...route.query, model: id, cfg: undefined } })
 }
 // Links like /customize?model=luna while already on the page.
 watch(
@@ -64,16 +73,32 @@ const fmt = (n: number) => `€${n.toFixed(2)}`
 const swatches = ref<Record<string, string>>({})
 function paintSwatches() {
   const out: Record<string, string> = {}
-  for (const g of STELLA_GROUPS) for (const o of g.list) if (o.id !== 'none') out[`${g.key}:${o.id}`] = swatchURL(g.key, o)
+  for (const g of STELLA_GROUPS) for (const o of g.list) out[`${g.key}:${o.id}`] = swatchURL(g.key, o)
   swatches.value = out
 }
 
-function isSelected(group: StellaGroup, id: string) {
+type SimpleGroup = Exclude<StellaGroup, 'patch'>
+function isSelected(group: SimpleGroup, id: string) {
   return group === 'wash' ? state.wash.includes(id) : state[group] === id
 }
-function pick(group: StellaGroup, id: string) {
+function pick(group: SimpleGroup, id: string) {
   if (group === 'wash') state.wash = toggleWash(state.wash, id, maxWashes(bag.value))
   else state[group] = id
+  // Show the lining while choosing it.
+  if (group === 'lining') inside.value = true
+}
+
+// ── Patches and monogram (placed by dragging them on the bag) ─────────────
+const SIZES: PatchSize[] = ['S', 'M', 'L']
+const selected = ref<{ kind: DecalKind; index: number } | null>(null)
+function newPatch() {
+  state.patches = addPatch(state)
+  selected.value = { kind: 'patch', index: state.patches.length - 1 }
+  inside.value = false
+}
+function removePatch(i: number) {
+  state.patches.splice(i, 1)
+  selected.value = null
 }
 function ariaLabel(o: StellaOption) {
   return o.p ? `${o.name}, più ${o.p} euro` : o.name
@@ -82,10 +107,13 @@ function ariaLabel(o: StellaOption) {
 const summary = computed(() => {
   const list: { key: string; name: string }[] = state.wash.map((id) => ({ key: `wash:${id}`, name: findOption(WASH, id).name }))
   list.push({ key: `lining:${state.lining}`, name: findOption(LINING, state.lining).name })
-  if (state.patch !== 'none') list.push({ key: `patch:${state.patch}`, name: findOption(PATCH, state.patch).name })
+  for (const id of new Set(state.patches.map((pt) => pt.style))) {
+    const n = state.patches.filter((pt) => pt.style === id).length
+    list.push({ key: `patch:${id}`, name: findOption(PATCH, id).name + (n > 1 ? ` ×${n}` : '') })
+  }
   if (hasHardware(bag.value)) list.push({ key: `hw:${state.hw}`, name: findOption(HW, state.hw).name })
-  if (state.finish !== 'none') list.push({ key: `finish:${state.finish}`, name: findOption(FINISH, state.finish).name })
-  return list.slice(0, 6)
+  list.push({ key: `finish:${state.finish}`, name: findOption(FINISH, state.finish).name })
+  return list.slice(0, 9)
 })
 
 const meta = computed(() => {
@@ -127,18 +155,20 @@ const zoomed = ref(false)
 const spinning = ref(false)
 const showHint = ref(true)
 const showAr = ref(false)
+const inside = ref(false)
 let scene: StellaScene | null = null
 
-watch(state, (s) => scene?.apply({ ...s, wash: [...s.wash] }), { deep: true })
+watch(state, () => scene?.apply(snapshot()), { deep: true })
 watch(zoomed, (z) => scene?.setZoom(z))
 watch(spinning, (s) => scene?.setSpin(s))
+watch(inside, (on) => scene?.setInside(on))
 
 onMounted(() => {
   if (backdrop.value) paintBackdrop(backdrop.value)
   const ready = document.fonts?.ready ?? Promise.resolve()
   void ready.then(() => {
     paintSwatches()
-    scene?.apply({ ...state, wash: [...state.wash] })
+    scene?.apply(snapshot())
   })
   if (!host.value) return
   try {
@@ -151,8 +181,16 @@ onMounted(() => {
         showHint.value = false
         spinning.value = false
       },
+      onSelect: (kind, index) => {
+        selected.value = { kind, index }
+        goTab(kind === 'mono' ? 'finish' : 'patch')
+      },
+      onPlace: (kind, index, at) => {
+        if (kind === 'mono') state.mono = at
+        else if (state.patches[index]) Object.assign(state.patches[index], at)
+      },
     })
-    scene.apply({ ...state, wash: [...state.wash] })
+    scene.apply(snapshot())
   } catch (err) {
     console.error('[configurator] WebGL unavailable', err)
     status.value = 'error'
@@ -187,7 +225,7 @@ function thumbnail(): string | null {
 }
 
 function addToBag() {
-  const snap: StellaState = { ...state, wash: [...state.wash], initials: state.finish === 'none' ? '' : state.initials }
+  const snap = snapshot()
   const b = findBag(snap.model)
   addLine({
     id: stellaKey(snap),
@@ -198,7 +236,7 @@ function addToBag() {
     imageAlt: `Borsa ${b.name} personalizzata`,
     quantity: 1,
     details: describeStella(snap),
-    link: `/customize?model=${b.id}`,
+    link: `/customize?model=${b.id}&cfg=${encodeStella(snap)}`,
   })
   added.value = true
 }
@@ -215,6 +253,10 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         <div ref="host" class="gl" />
 
         <div class="vp-ui">
+          <button v-if="status === 'ready'" class="ar-pill inside-pill" type="button" :aria-pressed="inside" @click="inside = !inside">
+            <svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13L4 9Zm4 0a4 4 0 0 1 8 0" /></svg>
+            <span>{{ inside ? 'VIEW OUTSIDE' : 'VIEW INSIDE' }}</span>
+          </button>
           <div class="vp-top">
             <a class="icon-btn" :href="INSTAGRAM" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <svg viewBox="0 0 24 24"><path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm4.9-8.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2ZM12 3.6c2.7 0 3 0 4.1.1 2.7.1 4 1.4 4.1 4.1.1 1.1.1 1.4.1 4.1s0 3-.1 4.1c-.1 2.7-1.4 4-4.1 4.1-1.1.1-1.4.1-4.1.1s-3 0-4.1-.1c-2.7-.1-4-1.4-4.1-4.1C3.7 15 3.6 14.7 3.6 12s0-3 .1-4.1c.1-2.7 1.4-4 4.1-4.1 1.1-.2 1.5-.2 4.2-.2ZM12 2c-2.7 0-3.1 0-4.1.1C4.2 2.2 2.2 4.2 2.1 7.9 2 8.9 2 9.3 2 12s0 3.1.1 4.1c.1 3.6 2.1 5.7 5.8 5.8 1 .1 1.4.1 4.1.1s3.1 0 4.1-.1c3.6-.1 5.7-2.1 5.8-5.8.1-1 .1-1.4.1-4.1s0-3.1-.1-4.1c-.1-3.6-2.1-5.7-5.8-5.8C15.1 2 14.7 2 12 2Z" /></svg>
@@ -257,7 +299,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
               <svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5M11 8H2" /></svg>
             </button>
           </div>
-          <span v-if="showHint && status === 'ready'" class="hint">Trascina per ruotare</span>
+          <span v-if="showHint && status === 'ready'" class="hint">Trascina per ruotare · trascina toppe e monogramma per spostarli</span>
         </div>
       </section>
 
@@ -296,19 +338,54 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
           </div>
           <div v-for="(g, i) in groups" :id="`stella-g-${g.key}`" :key="g.key" class="grp">
             <h3>{{ i + 2 }}. {{ g.title }}</h3>
-            <div class="sws">
+            <div v-if="g.key === 'patch'" class="patches">
+              <div
+                v-for="(pt, pi) in state.patches"
+                :key="pi"
+                class="prow"
+                :class="{ sel: selected?.kind === 'patch' && selected.index === pi }"
+                @click="selected = { kind: 'patch', index: pi }"
+              >
+                <span class="pnum">{{ pi + 1 }}</span>
+                <div class="pstyles" role="group" :aria-label="`Stile toppa ${pi + 1}`">
+                  <button
+                    v-for="o in PATCH"
+                    :key="o.id"
+                    type="button"
+                    class="swb"
+                    :title="o.name"
+                    :aria-pressed="pt.style === o.id"
+                    :aria-label="ariaLabel(o)"
+                    @click="pt.style = o.id"
+                  >
+                    <span class="sw" :style="swatches[`patch:${o.id}`] ? { backgroundImage: `url(${swatches[`patch:${o.id}`]})` } : undefined"><i class="chk" /></span>
+                  </button>
+                </div>
+                <div class="psize" role="group" :aria-label="`Misura toppa ${pi + 1}`">
+                  <button v-for="z in SIZES" :key="z" type="button" :aria-pressed="pt.size === z" @click="pt.size = z">{{ z }}</button>
+                </div>
+                <span class="pprice">+€{{ findOption(PATCH, pt.style).p }}</span>
+                <button type="button" class="prm" :aria-label="`Rimuovi toppa ${pi + 1}`" @click.stop="removePatch(pi)">×</button>
+              </div>
+              <button type="button" class="padd" :disabled="state.patches.length >= STELLA_MAX_PATCHES" @click="newPatch">
+                + ADD A PATCH
+              </button>
+              <p class="note">
+                Drag each patch on the bag to place it, front or back (up to {{ STELLA_MAX_PATCHES }}). Each patch is priced on its own.
+              </p>
+            </div>
+            <div v-else class="sws">
               <button
                 v-for="o in g.list"
                 :key="o.id"
                 type="button"
                 class="swb"
-                :aria-pressed="isSelected(g.key, o.id)"
+                :aria-pressed="isSelected(g.key as SimpleGroup, o.id)"
                 :aria-label="ariaLabel(o)"
-                @click="pick(g.key, o.id)"
+                @click="pick(g.key as SimpleGroup, o.id)"
               >
                 <span
                   class="sw"
-                  :class="{ none: o.id === 'none' }"
                   :style="swatches[`${g.key}:${o.id}`] ? { backgroundImage: `url(${swatches[`${g.key}:${o.id}`]})` } : undefined"
                 ><i class="chk" /></span>
                 <span>{{ o.name }}</span>
@@ -318,6 +395,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
               {{ maxWashes(bag) > 1 ? 'Up to two washes: the second one goes on strap and tab.' : 'One wash for the whole bag.' }}
             </p>
             <template v-if="g.key === 'finish'">
+              <p class="note">Every bag carries its monogram: drag it on the bag to choose where it goes.</p>
               <label class="ini" for="stella-initials">
                 Custom initials
                 <input
@@ -326,11 +404,10 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                   maxlength="3"
                   placeholder="L2"
                   autocomplete="off"
-                  :disabled="state.finish === 'none'"
                   :value="state.initials"
                   @input="onInitials"
                 />
-                <span v-if="state.initials && state.finish !== 'none'" class="plus">+€15</span>
+                <span v-if="state.initials" class="plus">+€{{ STELLA_INITIALS_PRICE }}</span>
               </label>
               <p class="meta">{{ meta }}</p>
             </template>
@@ -446,6 +523,15 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   width: 17px;
   height: 17px;
   fill: #fff;
+}
+.inside-pill {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+}
+.inside-pill[aria-pressed='true'] {
+  background: var(--color-selvedge);
+  box-shadow: 0 0 0 1px var(--color-brass);
 }
 .vp-top {
   position: absolute;
@@ -687,9 +773,88 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   font-size: 9.5px;
   color: var(--color-muted);
 }
-.sw.none {
-  background: transparent;
-  border-color: rgb(255 255 255 / 0.3);
+.patches {
+  display: grid;
+  gap: 6px;
+}
+.prow {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.prow.sel {
+  border-color: var(--color-brass-hi);
+}
+.pnum {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--color-muted);
+}
+.pstyles {
+  display: flex;
+  gap: 6px;
+}
+.pstyles .sw {
+  width: 34px;
+  height: 34px;
+}
+.pstyles .chk {
+  top: 0;
+  right: -2px;
+}
+.psize {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.psize button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: 500 10px/1 var(--font-mono);
+  cursor: pointer;
+}
+.psize button[aria-pressed='true'] {
+  background: var(--color-brass-hi);
+  color: #1b1b1b;
+}
+.pprice {
+  font: 400 10.5px/1 var(--font-mono);
+  color: var(--color-brass-hi);
+}
+.prm {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.prm:hover {
+  color: var(--color-fg);
+}
+.padd {
+  height: 34px;
+  border-radius: 17px;
+  border: 1px dashed var(--color-brass-hi);
+  background: none;
+  color: var(--color-brass-hi);
+  font: 500 11px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.padd:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .note {
   margin-top: 6px;
@@ -714,9 +879,6 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   font: 400 12px var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-.ini input:disabled {
-  opacity: 0.4;
 }
 .plus {
   color: var(--color-brass-hi);

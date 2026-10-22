@@ -1,20 +1,41 @@
 /**
  * three.js scene for the bag configurator. Loads the chosen model from
- * public/models/, dresses it with procedural denim/lining textures, and lays
- * two decals (patch + monogram) that are raycast onto the curved front.
+ * public/models/, dresses it with woven denim/lining textures, and lays the
+ * patches and the monogram as decals that hug the curved panels. Decals can
+ * be dragged on the bag (front or back); a cutaway view opens the front so
+ * the lining shows.
  * - `parts` models (Stella, from CLO) keep their fabric groups: body, strap,
  *   tab, rings and stitches each get their own material.
  * - `mesh` models (Meshy) are a single untextured shell: they get computed
  *   normals and box-projected UVs, then one denim material.
  * Browser-only: import it from a client-only component.
  *
- * Note: on Stella the patch decal also hides the perforated "H" that is still
- * cut into the source model; that must be removed in CLO before going live.
+ * Note: on Stella a plain denim cover piece (bag.cover) hides the perforated
+ * "H" still cut into the source model, so patches can move freely; the cut-out
+ * must still be removed in CLO before going live.
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { HW, LINING, STELLA_THREAD, WASH, findBag, findOption, maxWashes, type BagModel, type StellaState } from './options'
-import { denim, lining, mix, monoCanvas, patchCanvas, type DenimSpec } from './textures'
+import {
+  HW,
+  LINING,
+  PATCH_SCALE,
+  STELLA_THREAD,
+  WASH,
+  findBag,
+  findOption,
+  maxWashes,
+  type BagModel,
+  type Placement,
+  type StellaState,
+} from './options'
+import { canvas, denim, denimSpec, lining, monoCanvas, patchCanvas, type DenimSpec } from './textures'
+
+/** Size of one woven tile on the bag, in scene units (the body is ~1.7–2.1
+ *  units tall, so 128 warp yarns per tile ≈ real denim density). */
+const TILE = 0.32
+
+export type DecalKind = 'patch' | 'mono'
 
 /** Front, side, back. */
 export const STELLA_VIEWS = [0, Math.PI / 2, Math.PI] as const
@@ -30,16 +51,37 @@ interface Parts {
   stitch: THREE.Mesh[]
 }
 
+/** Depth of the body seen straight from the front (max z) or the back
+ *  (min z) on a grid over its bounding box, in holder space. */
+interface HeightMap {
+  res: number
+  z: Float32Array
+}
+
+interface Decal {
+  mesh: THREE.Mesh
+  kind: DecalKind
+  index: number
+  geoKey: string
+  texKey: string
+}
+
 interface Model {
   bag: BagModel
   holder: THREE.Group
   parts: Parts
   inner: THREE.Mesh[]
-  patch: THREE.Mesh
-  mono: THREE.Mesh
-  /** World-space texture repeat that gives a believable twill scale. */
+  /** Body bounding box in holder space. */
+  box: THREE.Box3
+  maps: Record<Placement['side'], HeightMap>
+  cover: THREE.Mesh | null
+  patches: Decal[]
+  mono: Decal
+  /** Texture repeat that gives the weave its real-world scale. */
   repeat: number
-  aspect: number
+  /** Body UV units per scene unit. */
+  dens: number
+  fabricKey: string
 }
 
 export interface StellaSceneOptions {
@@ -52,6 +94,10 @@ export interface StellaSceneOptions {
   onViewChange?: (index: number) => void
   /** First drag on the canvas (to hide the "drag to rotate" hint). */
   onInteract?: () => void
+  /** A patch or the monogram was grabbed on the bag. */
+  onSelect?: (kind: DecalKind, index: number) => void
+  /** A dragged decal moved to a new spot. */
+  onPlace?: (kind: DecalKind, index: number, at: Placement) => void
 }
 
 export interface StellaScene {
@@ -60,6 +106,8 @@ export interface StellaScene {
   setView: (index: number) => void
   setZoom: (on: boolean) => void
   setSpin: (on: boolean) => void
+  /** Cutaway: hide the front half so the lining shows. */
+  setInside: (on: boolean) => void
   dispose: () => void
 }
 
@@ -86,29 +134,92 @@ function uvDensity(geo: THREE.BufferGeometry): number {
   return sumW > 0 ? Math.sqrt(sumU / sumW) : 1
 }
 
+const HM_RES = 256
+
 /**
- * Build a plane of w×h centred on (cx, cy) and project every vertex onto the
- * targets along -z, so the decal hugs the curved panel. Vertices that miss
- * (or hit something far behind, like the strap's far side) are filled from
- * their neighbours.
+ * Rasterise the body's triangles into a depth grid, once per model: decals
+ * then hug the panel by sampling it, cheap enough to redo on every drag move.
  */
-function conform(targets: THREE.Mesh[], cx: number, cy: number, w: number, h: number, seg: number, lift: number) {
+function heightMap(meshes: THREE.Mesh[], box: THREE.Box3, side: Placement['side'], into?: HeightMap): HeightMap {
+  const R = HM_RES
+  const z = into?.z ?? new Float32Array(R * R).fill(NaN)
+  const W = box.max.x - box.min.x
+  const H = box.max.y - box.min.y
+  const front = side === 'front'
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3()
+  for (const m of meshes) {
+    const p = m.geometry.attributes.position as THREE.BufferAttribute
+    const idx = m.geometry.index
+    const n = idx ? idx.count : p.count
+    for (let t = 0; t < n; t += 3) {
+      a.fromBufferAttribute(p, idx ? idx.getX(t) : t).applyMatrix4(m.matrixWorld)
+      b.fromBufferAttribute(p, idx ? idx.getX(t + 1) : t + 1).applyMatrix4(m.matrixWorld)
+      c.fromBufferAttribute(p, idx ? idx.getX(t + 2) : t + 2).applyMatrix4(m.matrixWorld)
+      const ax = ((a.x - box.min.x) / W) * (R - 1), ay = ((a.y - box.min.y) / H) * (R - 1)
+      const bx = ((b.x - box.min.x) / W) * (R - 1), by = ((b.y - box.min.y) / H) * (R - 1)
+      const cx = ((c.x - box.min.x) / W) * (R - 1), cy = ((c.y - box.min.y) / H) * (R - 1)
+      const area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay)
+      if (Math.abs(area) < 1e-9) continue
+      const x0 = Math.max(0, Math.ceil(Math.min(ax, bx, cx))), x1 = Math.min(R - 1, Math.floor(Math.max(ax, bx, cx)))
+      const y0 = Math.max(0, Math.ceil(Math.min(ay, by, cy))), y1 = Math.min(R - 1, Math.floor(Math.max(ay, by, cy)))
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const w0 = ((bx - x) * (cy - y) - (cx - x) * (by - y)) / area
+          const w1 = ((cx - x) * (ay - y) - (ax - x) * (cy - y)) / area
+          const w2 = 1 - w0 - w1
+          if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue
+          const d = w0 * a.z + w1 * b.z + w2 * c.z
+          const k = y * R + x
+          const cur = z[k]!
+          if (Number.isNaN(cur) || (front ? d > cur : d < cur)) z[k] = d
+        }
+      }
+    }
+  }
+  return { res: R, z }
+}
+
+/** Depth at (x, y) in holder space, or null off the panel. */
+function sampleDepth(hm: HeightMap, box: THREE.Box3, x: number, y: number): number | null {
+  const R = hm.res
+  const gx = ((x - box.min.x) / (box.max.x - box.min.x)) * (R - 1)
+  const gy = ((y - box.min.y) / (box.max.y - box.min.y)) * (R - 1)
+  if (gx < 0 || gy < 0 || gx > R - 1 || gy > R - 1) return null
+  const x0 = Math.floor(gx), y0 = Math.floor(gy)
+  const x1 = Math.min(R - 1, x0 + 1), y1 = Math.min(R - 1, y0 + 1)
+  const tx = gx - x0, ty = gy - y0
+  const q = [hm.z[y0 * R + x0]!, hm.z[y0 * R + x1]!, hm.z[y1 * R + x0]!, hm.z[y1 * R + x1]!]
+  if (q.every((v) => !Number.isNaN(v))) {
+    const top = q[0]! + (q[1]! - q[0]!) * tx
+    const bot = q[2]! + (q[3]! - q[2]!) * tx
+    return top + (bot - top) * ty
+  }
+  const ok = q.filter((v) => !Number.isNaN(v))
+  return ok.length ? ok.reduce((s, v) => s + v, 0) / ok.length : null
+}
+
+/**
+ * Build a w×h plane centred on (cx, cy) and drop every vertex onto the
+ * panel (front or back), so the decal hugs the curve. Vertices off the panel,
+ * or far behind it (e.g. seen through the bag's opening), are filled from
+ * their neighbours. Back decals are mirrored so they read right from behind.
+ */
+function conform(m: Model, side: Placement['side'], cx: number, cy: number, w: number, h: number, seg: number, lift: number, smooth = 0) {
   const geo = new THREE.PlaneGeometry(w, h, seg, seg)
   const p = geo.attributes.position as THREE.BufferAttribute
-  const rc = new THREE.Raycaster()
-  const box = new THREE.Box3()
-  targets.forEach((m) => box.expandByObject(m))
+  const hm = m.maps[side]
+  const front = side === 'front'
+  const xs: number[] = []
   const zs: (number | null)[] = []
-  const dir = new THREE.Vector3(0, 0, -1)
   for (let i = 0; i < p.count; i++) {
-    rc.set(new THREE.Vector3(cx + p.getX(i), cy + p.getY(i), box.max.z + 1), dir)
-    const hit = rc.intersectObjects(targets, false)[0]
-    zs.push(hit ? hit.point.z : null)
+    const x = front ? cx + p.getX(i) : cx - p.getX(i)
+    xs.push(x)
+    zs.push(sampleDepth(hm, m.box, x, cy + p.getY(i)))
   }
   const vals = zs.filter((z): z is number => z !== null).sort((x, y) => x - y)
-  const med = vals[Math.floor(vals.length * 0.7)] ?? 0
+  const med = vals[Math.floor(vals.length * (front ? 0.7 : 0.3))] ?? (front ? m.box.max.z : m.box.min.z)
   const tol = Math.max(w, h) * 0.18
-  const ok = zs.map((z) => z !== null && z > med - tol)
+  const ok = zs.map((z) => z !== null && (front ? z > med - tol : z < med + tol))
   const cols = seg + 1
   for (let pass = 0; pass < 60; pass++) {
     let changed = false
@@ -127,7 +238,20 @@ function conform(targets: THREE.Mesh[], cx: number, cy: number, w: number, h: nu
     }
     if (!changed) break
   }
-  for (let i = 0; i < p.count; i++) p.setXYZ(i, cx + p.getX(i), cy + p.getY(i), (ok[i] ? zs[i]! : med) + lift)
+  let z = zs.map((v, i) => (ok[i] ? v! : med))
+  // Optional relaxation, to iron out puckers (keeps the outer ring fixed).
+  for (let pass = 0; pass < smooth; pass++) {
+    z = z.map((v, i) => {
+      const r = Math.floor(i / cols)
+      const c = i % cols
+      if (r === 0 || c === 0 || r === seg || c === seg) return v
+      return (v * 2 + z[i - 1]! + z[i + 1]! + z[i - cols]! + z[i + cols]!) / 6
+    })
+  }
+  // Never sink below the surface: relaxation would otherwise dip into it.
+  if (smooth) z = z.map((v, i) => (ok[i] && zs[i] !== null ? (front ? Math.max(v, zs[i]!) : Math.min(v, zs[i]!)) : v))
+  const dz = front ? lift : -lift
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, xs[i]!, cy + p.getY(i), z[i]! + dz)
   geo.computeVertexNormals()
   return geo
 }
@@ -158,6 +282,110 @@ function prepareShell(src: THREE.BufferGeometry): THREE.BufferGeometry {
   return geo
 }
 
+/**
+ * CLO exports both faces of the cloth, and which one faces out varies by
+ * pattern piece. Find each connected piece (welding vertices by position),
+ * let its triangles vote, area-weighted, on whether the normals point away
+ * from the bag's centre, and sort whole pieces into geometry groups
+ * [outer, inner] (materials 0 and 1).
+ */
+function splitByFacing(meshes: THREE.Mesh[], box: THREE.Box3) {
+  const centre = box.getCenter(new THREE.Vector3())
+  const eps = (box.max.y - box.min.y) * 1e-4
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3(), v = new THREE.Vector3()
+  const nm = new THREE.Matrix3()
+  for (const m of meshes) {
+    const g = m.geometry
+    if (!g.attributes.normal) g.computeVertexNormals()
+    const p = g.attributes.position as THREE.BufferAttribute
+    const normals = g.attributes.normal as THREE.BufferAttribute
+    const idx = g.index
+    const count = idx ? idx.count : p.count
+    const at = (t: number) => (idx ? idx.getX(t) : t)
+    // Union-find over vertices welded by position.
+    const parent = Int32Array.from({ length: p.count }, (_, i) => i)
+    const find = (i: number): number => {
+      while (parent[i] !== i) { parent[i] = parent[parent[i]!]!; i = parent[i]! }
+      return i
+    }
+    const union = (x: number, y: number) => { parent[find(x)] = find(y) }
+    const weld = new Map<string, number>()
+    for (let i = 0; i < p.count; i++) {
+      const key = `${Math.round(p.getX(i) / eps)},${Math.round(p.getY(i) / eps)},${Math.round(p.getZ(i) / eps)}`
+      const j = weld.get(key)
+      if (j === undefined) weld.set(key, i)
+      else union(i, j)
+    }
+    for (let t = 0; t < count; t += 3) { union(at(t), at(t + 1)); union(at(t), at(t + 2)) }
+    nm.getNormalMatrix(m.matrixWorld)
+    const vote = new Map<number, number>()
+    for (let t = 0; t < count; t += 3) {
+      a.fromBufferAttribute(p, at(t)).applyMatrix4(m.matrixWorld)
+      b.fromBufferAttribute(p, at(t + 1)).applyMatrix4(m.matrixWorld)
+      c.fromBufferAttribute(p, at(t + 2)).applyMatrix4(m.matrixWorld)
+      const area = v.subVectors(b, a).cross(n.subVectors(c, a)).length() / 2
+      n.set(0, 0, 0)
+      for (let k = 0; k < 3; k++) n.add(v.fromBufferAttribute(normals, at(t + k)))
+      n.applyMatrix3(nm).normalize()
+      const cen = v.copy(a).add(b).add(c).divideScalar(3).sub(centre).normalize()
+      const r = find(at(t))
+      vote.set(r, (vote.get(r) ?? 0) + Math.sign(n.dot(cen)) * area)
+    }
+    const outer: number[] = []
+    const inner: number[] = []
+    for (let t = 0; t < count; t += 3) {
+      ;((vote.get(find(at(t))) ?? 0) >= 0 ? outer : inner).push(at(t), at(t + 1), at(t + 2))
+    }
+    g.setIndex([...outer, ...inner])
+    g.clearGroups()
+    g.addGroup(0, outer.length, 0)
+    g.addGroup(outer.length, inner.length, 1)
+  }
+}
+
+/** Draw a surface only from the side its normals point to (CLO's winding
+ *  is not reliable, its normals are). */
+function facingOnly<T extends THREE.Material>(mat: T): T {
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace(
+      '#include <clipping_planes_fragment>',
+      '#include <clipping_planes_fragment>\n  if (dot(vNormal, vViewPosition) < 0.0) discard;',
+    )
+  }
+  mat.customProgramCacheKey = () => 'facing-only'
+  return mat
+}
+
+/**
+ * Remove stitch triangles on the front inside a spot (Stella: the rim of the
+ * cut-out the cover piece hides), so they don't poke through the decals.
+ * Expects world space to equal holder space (root at rest).
+ */
+function dropStitchesUnder(meshes: THREE.Mesh[], box: THREE.Box3, spot: { y: number; w: number; h: number }) {
+  const W = box.max.x - box.min.x
+  const H = box.max.y - box.min.y
+  const cx = (box.min.x + box.max.x) / 2
+  const cy = box.min.y + H * spot.y
+  const midZ = (box.min.z + box.max.z) / 2
+  const v = new THREE.Vector3()
+  const c = new THREE.Vector3()
+  for (const m of meshes) {
+    const g = m.geometry
+    const idx = g.index
+    if (!idx) continue
+    const p = g.attributes.position as THREE.BufferAttribute
+    const keep: number[] = []
+    for (let t = 0; t < idx.count; t += 3) {
+      c.set(0, 0, 0)
+      for (let k = 0; k < 3; k++) c.add(v.fromBufferAttribute(p, idx.getX(t + k)).applyMatrix4(m.matrixWorld))
+      c.divideScalar(3)
+      const under = Math.abs(c.x - cx) < (W * spot.w) / 2 && Math.abs(c.y - cy) < (H * spot.h) / 2 && c.z > midZ
+      if (!under) keep.push(idx.getX(t), idx.getX(t + 1), idx.getX(t + 2))
+    }
+    if (keep.length < idx.count) g.setIndex(keep)
+  }
+}
+
 function disposeObject(o: THREE.Object3D) {
   o.traverse((x) => {
     const m = x as THREE.Mesh
@@ -172,6 +400,7 @@ function disposeMaterial(m: THREE.Material | THREE.Material[] | undefined) {
     const std = x as THREE.MeshStandardMaterial
     std.map?.dispose()
     if (std.bumpMap && std.bumpMap !== std.map) std.bumpMap.dispose()
+    std.alphaMap?.dispose()
     x.dispose()
   }
 }
@@ -181,6 +410,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   // preserveDrawingBuffer: the cart thumbnail is copied from this canvas.
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  renderer.localClippingEnabled = true
   host.appendChild(renderer.domElement)
 
   const scene = new THREE.Scene()
@@ -204,12 +434,13 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   envLight(3, 3, -5.9, 0, 2, Math.PI / 2, 0, 0x9fb0cc)
   const envMap = pmrem.fromScene(env, 0.03).texture
   scene.environment = envMap
+  // Neutral, near-daylight lights so the denim colours read true.
   // Physically based light units (three >= r155): legacy intensities × π.
-  scene.add(new THREE.HemisphereLight(0xfff7ec, 0x6a6258, 0.45 * Math.PI))
-  const key = new THREE.DirectionalLight(0xfff4e6, 0.75 * Math.PI)
+  scene.add(new THREE.HemisphereLight(0xfbfaf7, 0x6a6560, 0.5 * Math.PI))
+  const key = new THREE.DirectionalLight(0xfffaf2, 0.75 * Math.PI)
   key.position.set(-3, 4, 5)
   scene.add(key)
-  const rim = new THREE.DirectionalLight(0xdfe7ff, 0.35 * Math.PI)
+  const rim = new THREE.DirectionalLight(0xe8eeff, 0.35 * Math.PI)
   rim.position.set(4, 1, -3)
   scene.add(rim)
 
@@ -217,11 +448,19 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   scene.add(root)
   const maxAniso = renderer.capabilities.getMaxAnisotropy()
 
-  function tex(c: HTMLCanvasElement, rep = 1) {
+  // Cutaway plane (holder space: keep z <= constant). Parked far away when
+  // the interior view is off, so materials never need recompiling.
+  const clipLocal = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e6)
+  const clip = new THREE.Plane()
+  const clipping = [clip]
+  let inside = false
+
+  function tex(c: HTMLCanvasElement, rep: number | [number, number] = 1, color = true) {
     const t = new THREE.CanvasTexture(c)
-    t.colorSpace = THREE.SRGBColorSpace
+    if (color) t.colorSpace = THREE.SRGBColorSpace
     t.wrapS = t.wrapT = THREE.RepeatWrapping
-    t.repeat.set(rep, rep)
+    if (Array.isArray(rep)) t.repeat.set(rep[0], rep[1])
+    else t.repeat.set(rep, rep)
     t.anisotropy = maxAniso
     return t
   }
@@ -230,56 +469,151 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   let pending: StellaState | null = null
   let disposed = false
 
-  function applyModel(state: StellaState) {
-    if (!model) return
-    const P = model.parts
-    const main = findOption(WASH, state.wash[0] ?? 'indigo')
-    const acc = state.wash[1] && maxWashes(model.bag) > 1 ? findOption(WASH, state.wash[1]) : main
-    const rep = model.repeat
-    const spec = (o: typeof main): DenimSpec => ({ hex: o.hex!, textured: o.textured, distressed: o.distressed })
-    const fabric = (w: DenimSpec, seed: number, side: THREE.Side) => {
-      const t = tex(denim(w, 512, seed), rep)
-      return new THREE.MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 0.006, roughness: 0.9, side })
-    }
-    const set = (list: THREE.Mesh[], mat: THREE.Material) => {
-      for (const m of list) { disposeMaterial(m.material); m.material = mat }
-    }
-
-    set(P.body, fabric(spec(main), 7, THREE.FrontSide))
-    const lin = new THREE.MeshStandardMaterial({
-      map: tex(lining(findOption(LINING, state.lining).id, 256), rep * 1.6),
-      roughness: state.lining === 'floral' ? 0.5 : 0.92,
-      side: THREE.BackSide,
-    })
-    set(model.inner, lin)
-    set(P.bodySide, fabric({ hex: mix(main.hex!, '#000000', 0.15), textured: main.textured }, 8, THREE.DoubleSide))
-    set(P.strap, fabric(spec(acc), 19, THREE.DoubleSide))
-    set(P.strapSide, fabric({ hex: mix(acc.hex!, '#000000', 0.18) }, 20, THREE.DoubleSide))
-    set(P.tab, fabric(spec(acc), 23, THREE.DoubleSide))
-    set(P.tabSide, fabric({ hex: mix(acc.hex!, '#000000', 0.18) }, 24, THREE.DoubleSide))
-    const hw = findOption(HW, state.hw)
-    set(P.ring, new THREE.MeshStandardMaterial({ color: hw.hex, metalness: 1, roughness: state.hw === 'black' ? 0.45 : 0.22, side: THREE.DoubleSide }))
-    set(P.stitch, new THREE.MeshStandardMaterial({ color: STELLA_THREAD, roughness: 0.75, side: THREE.DoubleSide }))
-
-    disposeMaterial(model.patch.material)
-    model.patch.material = new THREE.MeshStandardMaterial({
-      map: tex(patchCanvas(state, model.aspect)),
+  const decalMaterial = (map: THREE.Texture, order: number) =>
+    new THREE.MeshStandardMaterial({
+      map,
       transparent: true,
       alphaTest: 0.35,
       roughness: 0.85,
       polygonOffset: true,
-      polygonOffsetFactor: -2,
+      polygonOffsetFactor: -2 - order,
+      clippingPlanes: clipping,
     })
-    disposeMaterial(model.mono.material)
-    model.mono.visible = state.finish !== 'none'
-    model.mono.material = new THREE.MeshStandardMaterial({
-      map: tex(monoCanvas(state)),
-      transparent: true,
-      alphaTest: 0.3,
-      roughness: 0.7,
-      polygonOffset: true,
-      polygonOffsetFactor: -3,
+
+  function decalSize(m: Model, kind: DecalKind, size: keyof typeof PATCH_SCALE = 'L') {
+    const W = m.box.max.x - m.box.min.x
+    const H = m.box.max.y - m.box.min.y
+    if (kind === 'mono') return { w: W * m.bag.mono.w, h: W * m.bag.mono.w * 0.5 }
+    const f = PATCH_SCALE[size]
+    return { w: W * m.bag.patch.w * f, h: H * m.bag.patch.h * f }
+  }
+
+  /** Re-lay a decal's geometry at a placement. */
+  function placeDecal(m: Model, d: Decal, at: Placement, size?: keyof typeof PATCH_SCALE) {
+    const W = m.box.max.x - m.box.min.x
+    const H = m.box.max.y - m.box.min.y
+    const { w, h } = decalSize(m, d.kind, size)
+    const lift = d.kind === 'mono' ? 0.02 : 0.012 + d.index * 0.002
+    const geo = conform(m, at.side, m.box.min.x + W * at.u, m.box.min.y + H * at.v, w, h, d.kind === 'mono' ? 12 : 28, lift)
+    d.mesh.geometry.dispose()
+    d.mesh.geometry = geo
+  }
+
+  function newDecal(m: Model, kind: DecalKind, index: number): Decal {
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry())
+    mesh.renderOrder = kind === 'mono' ? 10 : 2 + index
+    m.holder.add(mesh)
+    return { mesh, kind, index, geoKey: '', texKey: '' }
+  }
+
+  function applyModel(state: StellaState) {
+    const m = model
+    if (!m) return
+    const P = m.parts
+    const main = findOption(WASH, state.wash[0] ?? 'indigo')
+    const acc = state.wash[1] && maxWashes(m.bag) > 1 ? findOption(WASH, state.wash[1]) : main
+    const rep = m.repeat
+    const fabric = (w: DenimSpec, side: THREE.Side, clipped = true) => {
+      const { map, bump } = denim(w)
+      return new THREE.MeshStandardMaterial({
+        map: tex(map, rep),
+        bumpMap: tex(bump, rep, false),
+        bumpScale: 0.6,
+        roughness: 0.92,
+        side,
+        clippingPlanes: clipped ? clipping : [],
+      })
+    }
+    const set = (list: THREE.Mesh[], mat: THREE.Material | THREE.Material[]) => {
+      const old = new Set(list.map((x) => x.material))
+      for (const o of old) disposeMaterial(o)
+      for (const x of list) x.material = mat
+    }
+
+    const fabricKey = [main.id, acc.id, state.lining, state.hw].join('|')
+    if (fabricKey !== m.fabricKey) {
+      m.fabricKey = fabricKey
+      const liningMat = (side: THREE.Side) =>
+        new THREE.MeshStandardMaterial({
+          map: tex(lining(findOption(LINING, state.lining).id, 256), rep * 0.9),
+          roughness: state.lining === 'floral' ? 0.5 : 0.92,
+          side,
+          clippingPlanes: clipping,
+        })
+      if (m.bag.kind === 'parts') {
+        // Cloth pieces were sorted into [outer, inner] groups at load; each
+        // shows only from the side it faces, so seams don't leak lining.
+        const pair = [facingOnly(fabric(denimSpec(main), THREE.DoubleSide)), facingOnly(liningMat(THREE.DoubleSide))]
+        set([...P.body, ...P.bodySide], pair)
+      } else {
+        set(P.body, fabric(denimSpec(main), THREE.FrontSide))
+        set(m.inner, liningMat(THREE.BackSide))
+      }
+      set(P.strap, fabric(denimSpec(acc), THREE.DoubleSide, false))
+      set(P.strapSide, fabric(denimSpec(acc, 0.18), THREE.DoubleSide, false))
+      set(P.tab, fabric(denimSpec(acc), THREE.DoubleSide))
+      set(P.tabSide, fabric(denimSpec(acc, 0.18), THREE.DoubleSide))
+      const hw = findOption(HW, state.hw)
+      set(P.ring, new THREE.MeshStandardMaterial({ color: hw.hex, metalness: 1, roughness: state.hw === 'black' ? 0.45 : 0.22, side: THREE.DoubleSide }))
+      set(P.stitch, new THREE.MeshStandardMaterial({ color: STELLA_THREAD, roughness: 0.75, side: THREE.DoubleSide, clippingPlanes: clipping }))
+      if (m.cover) {
+        // Same weave as the body, faded in at the edges by the alpha map.
+        const { map, bump } = denim(denimSpec(main))
+        const old = m.cover.material as THREE.MeshStandardMaterial
+        const alphaMap = old.alphaMap
+        old.map?.dispose()
+        old.bumpMap?.dispose()
+        old.dispose()
+        m.cover.material = new THREE.MeshStandardMaterial({
+          map: tex(map, rep),
+          bumpMap: tex(bump, rep, false),
+          bumpScale: 0.6,
+          roughness: 0.92,
+          alphaMap,
+          transparent: true,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          clippingPlanes: clipping,
+        })
+      }
+    }
+
+    // Patches: add/remove meshes to match, then refresh what changed.
+    while (m.patches.length > state.patches.length) {
+      const d = m.patches.pop()!
+      m.holder.remove(d.mesh)
+      disposeObject(d.mesh)
+    }
+    while (m.patches.length < state.patches.length) m.patches.push(newDecal(m, 'patch', m.patches.length))
+    state.patches.forEach((pt, i) => {
+      const d = m.patches[i]!
+      const geoKey = `${pt.side}|${pt.u}|${pt.v}|${pt.size}`
+      if (geoKey !== d.geoKey) {
+        placeDecal(m, d, pt, pt.size)
+        d.geoKey = geoKey
+      }
+      const texKey = `${pt.style}|${main.id}`
+      if (texKey !== d.texKey) {
+        const { w, h } = decalSize(m, 'patch', 'L')
+        disposeMaterial(d.mesh.material)
+        d.mesh.material = decalMaterial(tex(patchCanvas(pt.style, main.id, h / w, (TILE * 1024) / w)), 1 + i * 0.5)
+        d.texKey = texKey
+      }
     })
+
+    const mono = m.mono
+    const geoKey = `${state.mono.side}|${state.mono.u}|${state.mono.v}`
+    if (geoKey !== mono.geoKey) {
+      placeDecal(m, mono, state.mono)
+      mono.geoKey = geoKey
+    }
+    const texKey = `${state.finish}|${state.initials}`
+    if (texKey !== mono.texKey) {
+      disposeMaterial(mono.mesh.material)
+      mono.mesh.material = decalMaterial(tex(monoCanvas(state.finish, state.initials)), 4)
+      ;(mono.mesh.material as THREE.MeshStandardMaterial).alphaTest = 0.3
+      mono.texKey = texKey
+    }
   }
 
   function onModel(sc: THREE.Object3D, bag: BagModel) {
@@ -323,21 +657,15 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     root.add(holder)
     root.updateMatrixWorld(true)
 
-    const bw = new THREE.Box3()
-    parts.body.forEach((m) => bw.expandByObject(m))
-    const W = bw.max.x - bw.min.x
-    const H = bw.max.y - bw.min.y
-    const cx = (bw.min.x + bw.max.x) / 2
+    // With root at rest, world space is holder space.
+    const box = new THREE.Box3()
+    parts.body.forEach((m) => box.expandByObject(m))
     const dens = uvDensity(parts.body[0]!.geometry) / k
-    // Patch sits low on the front (on Stella it covers the perforated H);
-    // monogram above it. Spots are per model, as fractions of the bbox.
-    const ps = bag.patch
-    const ms = bag.mono
-    const patchGeo = conform(parts.body, cx, bw.min.y + H * ps.y, W * ps.w, H * ps.h, 28, 0.012)
-    const monoGeo = conform(parts.body, cx, bw.min.y + H * ms.y, W * ms.w, W * ms.w * 0.5, 10, 0.014)
+    const maps = { front: heightMap(parts.body, box, 'front'), back: heightMap(parts.body, box, 'back') }
 
-    // Inner shell (BackSide) so the lining shows through the bag's opening.
-    const inner = parts.body.map((m) => {
+    if (bag.kind === 'parts') splitByFacing([...parts.body, ...parts.bodySide], box)
+    // Single shells get an inner copy (BackSide) that carries the lining.
+    const inner = bag.kind === 'parts' ? [] : parts.body.map((m) => {
       const s = new THREE.Mesh(m.geometry)
       s.position.copy(m.position)
       s.quaternion.copy(m.quaternion)
@@ -345,10 +673,47 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       m.parent!.add(s)
       return s
     })
-    const patch = new THREE.Mesh(patchGeo)
-    const mono = new THREE.Mesh(monoGeo)
-    holder.add(patch, mono)
-    model = { bag, holder, parts, inner, patch, mono, repeat: 1 / (dens * 0.14), aspect: (H * ps.h) / (W * ps.w) }
+    clipLocal.constant = inside ? (box.min.z + box.max.z) / 2 : 1e6
+    if (bag.cover) dropStitchesUnder(parts.stitch, box, bag.cover)
+    const m: Model = {
+      bag, holder, parts, inner, box, maps, cover: null, patches: [],
+      mono: null as unknown as Decal, repeat: 1 / (dens * TILE), dens, fabricKey: '',
+    }
+    m.mono = newDecal(m, 'mono', 0)
+    if (bag.cover) {
+      const W = box.max.x - box.min.x
+      const H = box.max.y - box.min.y
+      const cw = W * bag.cover.w
+      const ch = H * bag.cover.h
+      const x0 = (box.min.x + box.max.x) / 2 - cw / 2
+      const y0 = box.min.y + H * bag.cover.y - ch / 2
+      const geo = conform(m, 'front', x0 + cw / 2, y0 + ch / 2, cw, ch, 40, 0.008, 6)
+      // UVs in body units so the shared weave lines up in scale.
+      const gp = geo.attributes.position as THREE.BufferAttribute
+      const uv = new Float32Array(gp.count * 2)
+      for (let i = 0; i < gp.count; i++) {
+        uv[i * 2] = gp.getX(i) * dens
+        uv[i * 2 + 1] = gp.getY(i) * dens
+      }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+      const fade = canvas(256)
+      const g = fade.getContext('2d')!
+      g.filter = 'blur(6px)'
+      g.fillStyle = '#fff'
+      g.beginPath()
+      g.roundRect(10, 10, 236, 236, 40)
+      g.fill()
+      const alpha = new THREE.CanvasTexture(fade)
+      alpha.repeat.set(1 / (cw * dens), 1 / (ch * dens))
+      alpha.offset.set(-x0 / cw, -y0 / ch)
+      m.cover = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ alphaMap: alpha }))
+      m.cover.renderOrder = 1
+      holder.add(m.cover)
+      // Patches then lie on top of the cover, not under it.
+      m.cover.updateMatrixWorld(true)
+      heightMap([m.cover], box, 'front', maps.front)
+    }
+    model = m
   }
 
   // Load on demand; a newer request supersedes one still in flight.
@@ -388,21 +753,59 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     if (!w || !h) { w = 900; h = 610 }
     renderer.setSize(w, h, false)
     camera.aspect = w / h
-    camZT = (w / h < 0.95 ? 9.4 : 7.2) * (zoomed ? 0.68 : 1)
+    camZT = (w / h < 0.95 ? 9.4 : 7.2) * (zoomed ? 0.68 : inside ? 0.84 : 1)
     camera.updateProjectionMatrix()
   }
   resize()
   const ro = new ResizeObserver(resize)
   ro.observe(host)
 
-  // ── Interaction: drag to orbit, dots/arrows snap ─────────────────────────
+  // ── Interaction: drag decals on the bag, drag elsewhere to orbit ─────────
   let rotY = -0.25, tY = -0.25, rotX = 0.04, tX = 0.04
   let spin = false
   let drag: { x: number; y: number; ty: number; tx: number } | null = null
+  let grab: { d: Decal; du: number; dv: number; at: Placement } | null = null
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
   const el = renderer.domElement
   el.style.touchAction = 'pan-y'
   el.style.cursor = 'grab'
+
+  const ray = new THREE.Raycaster()
+  const ndc = new THREE.Vector2()
+  const inv = new THREE.Matrix4()
+  function cast(clientX: number, clientY: number, objs: THREE.Object3D[]) {
+    const r = el.getBoundingClientRect()
+    ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1)
+    ray.setFromCamera(ndc, camera)
+    // Skip what the cutaway hides.
+    return ray.intersectObjects(objs, false).find((h) => !inside || clip.distanceToPoint(h.point) >= 0) ?? null
+  }
+  const decalMeshes = () => (model ? [model.mono, ...model.patches].map((d) => d.mesh) : [])
+  function decalAt(clientX: number, clientY: number): Decal | null {
+    if (!model) return null
+    const hit = cast(clientX, clientY, decalMeshes())
+    return hit ? ([model.mono, ...model.patches].find((d) => d.mesh === hit.object) ?? null) : null
+  }
+  /** Body point under the pointer as a placement, or null off the bag / on a side. */
+  function bodyAt(clientX: number, clientY: number): Placement | null {
+    const m = model
+    if (!m) return null
+    const hit = cast(clientX, clientY, m.parts.body)
+    if (!hit?.face) return null
+    inv.copy(m.holder.matrixWorld).invert()
+    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).transformDirection(inv)
+    if (Math.abs(n.z) < 0.3) return null
+    const lp = hit.point.clone().applyMatrix4(inv)
+    return {
+      u: (lp.x - m.box.min.x) / (m.box.max.x - m.box.min.x),
+      v: (lp.y - m.box.min.y) / (m.box.max.y - m.box.min.y),
+      side: n.z > 0 ? 'front' : 'back',
+    }
+  }
+  const highlight = (d: Decal, on: boolean) => {
+    const mat = d.mesh.material as THREE.MeshStandardMaterial
+    if (mat.emissive) mat.emissive.setScalar(on ? 0.12 : 0)
+  }
 
   function nearestView() {
     const a = ((tY % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
@@ -416,26 +819,72 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   }
 
   const onDown = (e: PointerEvent) => {
-    drag = { x: e.clientX, y: e.clientY, ty: tY, tx: tX }
     spin = false
-    el.setPointerCapture(e.pointerId)
-    el.style.cursor = 'grabbing'
     opts.onInteract?.()
+    el.setPointerCapture(e.pointerId)
+    const d = decalAt(e.clientX, e.clientY)
+    const at = d ? bodyAt(e.clientX, e.clientY) : null
+    if (d && at && model) {
+      const cur = d.kind === 'mono' ? pending?.mono : pending?.patches[d.index]
+      grab = { d, du: (cur?.u ?? at.u) - at.u, dv: (cur?.v ?? at.v) - at.v, at: cur ?? at }
+      highlight(d, true)
+      opts.onSelect?.(d.kind, d.index)
+      el.style.cursor = 'grabbing'
+      return
+    }
+    drag = { x: e.clientX, y: e.clientY, ty: tY, tx: tX }
+    el.style.cursor = 'grabbing'
   }
   const onMove = (e: PointerEvent) => {
-    if (!drag) return
+    if (grab && model) {
+      const at = bodyAt(e.clientX, e.clientY)
+      if (!at) return
+      // Keep the grab offset only while staying on the same panel.
+      const sameSide = at.side === grab.at.side
+      // Keep most of the decal on the bag.
+      const size = grab.d.kind === 'patch' ? pending?.patches[grab.d.index]?.size : undefined
+      const ds = decalSize(model, grab.d.kind, size)
+      const mu = Math.min(0.45, (ds.w / (model.box.max.x - model.box.min.x)) * 0.4)
+      const mv = Math.min(0.45, (ds.h / (model.box.max.y - model.box.min.y)) * 0.4)
+      const fit = (x: number, mg: number) => Math.round(Math.min(1 - mg, Math.max(mg, x)) * 1000) / 1000
+      const next: Placement = {
+        side: at.side,
+        u: fit(at.u + (sameSide ? grab.du : 0), Math.max(0.05, mu)),
+        v: fit(at.v + (sameSide ? grab.dv : 0), Math.max(0.05, mv)),
+      }
+      if (sampleDepth(model.maps[next.side], model.box, model.box.min.x + (model.box.max.x - model.box.min.x) * next.u, model.box.min.y + (model.box.max.y - model.box.min.y) * next.v) === null) return
+      if (!sameSide) { grab.du = 0; grab.dv = 0 }
+      grab.at = next
+      placeDecal(model, grab.d, next, size)
+      grab.d.geoKey = grab.d.kind === 'mono' ? `${next.side}|${next.u}|${next.v}` : `${next.side}|${next.u}|${next.v}|${size}`
+      opts.onPlace?.(grab.d.kind, grab.d.index, next)
+      return
+    }
+    if (!drag) {
+      el.style.cursor = decalAt(e.clientX, e.clientY) ? 'move' : 'grab'
+      return
+    }
     tY = drag.ty + (e.clientX - drag.x) * 0.011
     tX = Math.max(-0.35, Math.min(0.6, drag.tx + (e.clientY - drag.y) * 0.005))
   }
   const onUp = () => {
+    if (grab) highlight(grab.d, false)
+    const wasOrbit = !!drag
+    grab = null
     drag = null
     el.style.cursor = 'grab'
-    nearestView()
+    if (wasOrbit) nearestView()
+  }
+  // On touch screens a finger on a decal must not scroll the page.
+  const onTouch = (e: TouchEvent) => {
+    const t = e.touches[0]
+    if (t && decalAt(t.clientX, t.clientY)) e.preventDefault()
   }
   el.addEventListener('pointerdown', onDown)
   el.addEventListener('pointermove', onMove)
   el.addEventListener('pointerup', onUp)
   el.addEventListener('pointercancel', onUp)
+  el.addEventListener('touchstart', onTouch, { passive: false })
 
   // ── Render loop ─────────────────────────────────────────────────────────
   const t0 = performance.now()
@@ -448,8 +897,14 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     camera.position.z = camZ
     camera.lookAt(0, 0.05, 0)
     const tt = now - t0
-    root.rotation.set(rotX, rotY, reduce ? 0 : Math.sin(tt / 2000) * 0.01)
-    root.position.y = reduce ? 0 : Math.sin(tt / 1400) * 0.02
+    // Hold still while a decal is being placed.
+    const still = reduce || grab
+    root.rotation.set(rotX, rotY, still ? 0 : Math.sin(tt / 2000) * 0.01)
+    root.position.y = still ? 0 : Math.sin(tt / 1400) * 0.02
+    if (model) {
+      root.updateMatrixWorld(true)
+      clip.copy(clipLocal).applyMatrix4(model.holder.matrixWorld)
+    }
     renderer.render(scene, camera)
     raf = requestAnimationFrame(loop)
   }
@@ -471,7 +926,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       spin = false
       const a = STELLA_VIEWS[index] ?? 0
       tY = Math.round((tY - a) / (Math.PI * 2)) * Math.PI * 2 + a
-      tX = 0.04
+      tX = inside ? 0.42 : 0.04
       opts.onViewChange?.(index)
     },
     setZoom(on) {
@@ -481,6 +936,17 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     setSpin(on) {
       spin = on
     },
+    setInside(on) {
+      inside = on
+      if (model) clipLocal.constant = on ? (model.box.min.z + model.box.max.z) / 2 : 1e6
+      else if (!on) clipLocal.constant = 1e6
+      spin = false
+      // Face the cut and look down into the bag.
+      tY = Math.round(tY / (Math.PI * 2)) * Math.PI * 2 + (on ? -0.35 : 0)
+      tX = on ? 0.42 : 0.04
+      resize()
+      opts.onViewChange?.(0)
+    },
     dispose() {
       disposed = true
       cancelAnimationFrame(raf)
@@ -489,6 +955,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       el.removeEventListener('pointermove', onMove)
       el.removeEventListener('pointerup', onUp)
       el.removeEventListener('pointercancel', onUp)
+      el.removeEventListener('touchstart', onTouch)
       disposeObject(scene)
       envMap.dispose()
       pmrem.dispose()

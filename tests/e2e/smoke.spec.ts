@@ -74,6 +74,11 @@ test('customize: picking options updates the price and adds the bag to the cart'
   await expect(price).toHaveText('€410.00')
   await page.getByRole('button', { name: /Street Art/ }).click()
   await expect(price).toHaveText('€415.00')
+  // Every extra patch is priced on its own (Organic Patterns, +€25).
+  await page.getByRole('button', { name: '+ ADD A PATCH' }).click()
+  await expect(price).toHaveText('€440.00')
+  await page.getByRole('button', { name: 'Rimuovi toppa 2' }).click()
+  await expect(price).toHaveText('€415.00')
   await page.getByRole('button', { name: 'ADD TO BAG' }).click()
   await expect(page.getByRole('link', { name: /Carrello \(1\)/ })).toBeVisible()
 })
