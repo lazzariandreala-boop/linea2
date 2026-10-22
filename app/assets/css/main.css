@@ -137,8 +137,8 @@
     height: auto;
   }
 
-  /* Embeds (TikTok, YouTube, …) get the same soft corners as the cards. */
-  iframe {
+  /* Every picture and embed gets soft corners (8px minimum, as asked). */
+  img, picture, video, iframe, canvas {
     border-radius: var(--radius-card);
   }
 }
@@ -183,7 +183,9 @@
 
   /* Alternate ivory band, to separate sections without lines. */
   .band {
-    background-color: var(--color-ivory-2);
+    background:
+      radial-gradient(60% 80% at 0% 0%, rgb(196 160 116 / 0.28), transparent 70%),
+      linear-gradient(180deg, #e4d3b8 0%, #ede3d2 45%, #f4f0e7 100%);
   }
 
   /* Short ochre rule above section titles (as in the mock-up). */
@@ -264,9 +266,13 @@
     backdrop-filter: blur(12px);
   }
 
-  /* Page canvas: plain warm ivory. */
+  /* Page canvas: warm off-white washed with light tan, so the page has depth
+     rather than a flat fill. */
   .site-canvas {
-    background: var(--color-bg);
+    background:
+      radial-gradient(55% 40% at 100% 0%, rgb(201 168 126 / 0.32), transparent 70%),
+      radial-gradient(50% 35% at 0% 55%, rgb(201 168 126 / 0.22), transparent 70%),
+      linear-gradient(180deg, #efe5d4 0%, #f4f0e7 30%, #f1e9dc 65%, #e6d7c0 100%);
   }
 
   .gold-rule {

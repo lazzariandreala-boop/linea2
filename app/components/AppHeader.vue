@@ -61,7 +61,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 bg-bg/92 backdrop-blur-md">
+  <header class="sticky top-0 z-50 bg-[linear-gradient(90deg,rgb(232_218_196/0.85),rgb(244_240_231/0.85)_50%,rgb(232_218_196/0.85))] backdrop-blur-md">
     <p class="on-denim py-2 text-center text-[10.5px] font-semibold uppercase tracking-[0.22em]">
       Denim recuperato · Fatto a mano in Italia
     </p>

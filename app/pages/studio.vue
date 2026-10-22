@@ -38,13 +38,15 @@ useSeoHead({
           <UiBaseButton to="/editorial" variant="outline" size="lg">Leggi il Journal</UiBaseButton>
         </div>
       </div>
+      <div class="px-(--site-gutter) pb-10 lg:py-10 lg:pr-6 lg:pl-0">
       <img
         src="/editorial/workbench.webp"
         alt="Pezzi di denim recuperato sul tavolo da taglio del laboratorio"
         width="1400"
         height="1000"
-        class="aspect-[7/5] h-full w-full object-cover lg:rounded-l-[10px]"
+        class="aspect-[7/5] h-full w-full rounded-panel object-cover shadow-card"
       />
+      </div>
     </section>
 
     <section class="band py-14 sm:py-16">

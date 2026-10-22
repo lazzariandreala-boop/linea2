@@ -44,7 +44,7 @@ useSeoHead({
     <HeroSection :home="home" />
 
     <!-- Values -->
-    <section class="border-y border-fg/10">
+    <section class="border-y border-fg/10 bg-[linear-gradient(90deg,#e8dac4_0%,#f4f0e7_50%,#e8dac4_100%)]">
       <ul class="site-container grid grid-cols-3 divide-x divide-fg/10">
         <li v-for="v in VALUES" :key="v.text" class="flex flex-col items-center gap-2.5 px-2 py-6 text-center sm:py-7">
           <svg class="h-7 w-7 text-fg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -72,14 +72,16 @@ useSeoHead({
 
     <!-- 02 · The story -->
     <section class="grid items-center lg:grid-cols-2">
+      <div class="px-(--site-gutter) pt-10 lg:py-10 lg:pr-0 lg:pl-6">
       <img
         src="/editorial/workbench.webp"
         alt="Pezzi di denim recuperato sul tavolo da taglio del laboratorio"
         width="1400"
         height="1000"
         loading="lazy"
-        class="aspect-[7/5] h-full w-full object-cover lg:rounded-r-[10px]"
+        class="aspect-[7/5] h-full w-full rounded-panel object-cover shadow-card"
       />
+      </div>
       <div class="px-(--site-gutter) py-12 lg:px-16 lg:py-20">
         <UiReveal>
           <div class="max-w-md">
