@@ -36,12 +36,12 @@ const description = DESCRIPTIONS[props.category ?? 'all']
 const title = computed(() => {
   if (props.category === 'accessories') return t((m) => m.nav.accessories)
   if (props.category === 'bags') return t((m) => m.nav.bags)
-  return 'The collection'
+  return 'La collezione'
 })
 
 // Category chips (links, so each filter keeps its own URL).
 const chips: { to: string; label: string; active: boolean }[] = [
-  { to: '/shop', label: 'All', active: !props.category },
+  { to: '/shop', label: 'Tutto', active: !props.category },
   { to: '/bags', label: t((m) => m.nav.bags), active: props.category === 'bags' },
   { to: '/accessories', label: t((m) => m.nav.accessories), active: props.category === 'accessories' },
 ]
@@ -57,7 +57,7 @@ useSeoHead({
 <template>
   <div class="site-container py-8 sm:py-10">
     <UiReveal>
-      <UiSectionHeading eyebrow="Shop" :title="title" :subtitle="description" as="h1" />
+      <UiSectionHeading :title="title" :subtitle="description" as="h1" />
     </UiReveal>
 
     <nav class="mt-6 flex flex-wrap gap-2" aria-label="Categorie">
@@ -65,34 +65,32 @@ useSeoHead({
         v-for="chip in chips"
         :key="chip.to"
         :to="chip.to"
-        class="label-caps rounded-pill border px-4 py-2 text-xs transition-colors"
-        :class="chip.active ? 'border-brass-hi text-brass-hi' : 'border-fg/20 text-fg/75 hover:border-fg/50 hover:text-fg'"
+        class="rounded-lg border px-4 py-2 text-sm font-semibold transition-colors"
+        :class="chip.active ? 'border-fg bg-fg text-bg' : 'border-fg/20 text-fg/80 hover:border-fg/50 hover:text-fg'"
         :aria-current="chip.active ? 'page' : undefined"
       >
         {{ chip.label }}
       </NuxtLink>
       <NuxtLink
         to="/customize"
-        class="label-caps rounded-pill bg-primary px-4 py-2 text-xs text-on-primary transition-colors hover:bg-primary-strong"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary transition-colors hover:bg-primary-strong"
       >
-        Customize your bag
+        Personalizza la tua borsa
       </NuxtLink>
     </nav>
 
     <section v-if="!category" class="mt-10" aria-labelledby="made-to-order">
       <div class="flex items-end justify-between gap-4">
-        <h2 id="made-to-order" class="text-title text-fg">Made to order</h2>
-        <NuxtLink to="/customize" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
-          Customize
-        </NuxtLink>
+        <h2 id="made-to-order" class="text-title text-fg">Su misura</h2>
+        <NuxtLink to="/customize" class="arrow-link">Personalizza</NuxtLink>
       </div>
-      <p class="mt-2 max-w-xl text-sm text-fg/70">Scegli il modello e personalizzalo: lo cuciamo su ordinazione.</p>
+      <p class="mt-2 max-w-xl text-sm text-muted">Scegli il modello e personalizzalo: lo cuciamo su ordinazione.</p>
       <div class="mt-5">
         <BagModelGrid />
       </div>
     </section>
 
-    <h2 v-if="!category" class="mt-10 text-title text-fg">Ready to ship</h2>
+    <h2 v-if="!category" class="mt-12 text-title text-fg">Pronti da spedire</h2>
     <div class="mt-8">
       <FilterSortBar v-model:sort="sort" v-model:tag="tag" :tags="tags" :count="displayed.length" />
     </div>

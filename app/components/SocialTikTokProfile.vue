@@ -14,14 +14,14 @@ const profileUrl = computed(() => `https://www.tiktok.com/@${props.handle}`)
 <template>
   <div
     v-if="!loaded"
-    class="card-depth relative flex min-h-[240px] w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-linear-to-br from-wash via-selvedge to-raw p-6 text-center shadow-card"
+    class="on-denim flex min-h-[220px] w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-card p-6 text-center"
   >
-    <span class="flex h-16 w-16 items-center justify-center rounded-full border border-brass/50 bg-black/30 text-white">
+    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-ochre/60 text-ivory">
       <SocialIcon name="tiktok" class="h-7 w-7" />
     </span>
     <div>
-      <p class="font-mono text-sm text-brass-hi">@{{ handle }}</p>
-      <p class="mt-2 max-w-xs text-sm text-white/75">Gli ultimi video dal laboratorio, aggiornati in automatico da TikTok.</p>
+      <p class="font-mono text-sm text-ochre">@{{ handle }}</p>
+      <p class="mt-2 max-w-xs text-sm text-ivory/80">Gli ultimi video dal laboratorio, aggiornati in automatico da TikTok.</p>
     </div>
     <div class="relative z-10 flex flex-wrap justify-center gap-3">
       <UiBaseButton variant="solid" @click="loaded = true">Guarda i video</UiBaseButton>
@@ -30,7 +30,7 @@ const profileUrl = computed(() => `https://www.tiktok.com/@${props.handle}`)
   </div>
 
   <!-- No card-depth here: its overlay would cover the TikTok iframe. -->
-  <div v-else class="w-full rounded-panel bg-linear-to-br from-brass/60 via-wash to-selvedge p-1.5 shadow-card sm:p-2">
+  <div v-else class="on-denim w-full rounded-panel p-1.5 sm:p-2">
     <ClientOnly>
       <TikTokEmbed :video-url="profileUrl" :title="`@${handle}`" :creator="handle" />
     </ClientOnly>

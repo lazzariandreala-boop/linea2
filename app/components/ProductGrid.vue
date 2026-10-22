@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Product } from '~/types/content'
 
-// 1 col mobile → 2 tablet → 3–4 desktop, per the catalog spec.
+// 2 cols on phones, 3–4 on desktop.
 const props = withDefaults(defineProps<{ products: Product[]; eagerCount?: number }>(), {
   eagerCount: 0,
 })
@@ -10,7 +10,7 @@ const few = computed(() => props.products.length <= 3)
 </script>
 
 <template>
-  <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" :class="{ 'xl:grid-cols-4': !few }">
+  <ul class="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-6" :class="{ 'xl:grid-cols-4': !few }">
     <UiReveal
       v-for="(product, i) in products"
       :key="product.documentId"

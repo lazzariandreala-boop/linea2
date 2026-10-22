@@ -20,8 +20,6 @@ export interface Messages {
     tutorials: string
     menu: string
     close: string
-    lightMode: string
-    darkMode: string
     account: string
     cart: string
     signIn: string
@@ -116,18 +114,16 @@ export const messages: Record<Locale, Messages> = {
     brand: { tagline: 'Accessori e borse in upcycling' },
     nav: {
       home: 'Home',
-      shop: 'Shop',
-      customize: 'Customize',
-      editorial: 'Editorial',
-      studio: 'Studio',
+      shop: 'Borse',
+      customize: 'Personalizza',
+      editorial: 'Journal',
+      studio: 'Il nostro approccio',
       accessories: 'Accessori',
       bags: 'Borse',
       tiktok: 'TikTok',
       tutorials: 'Tutorial',
       menu: 'Apri il menu',
       close: 'Chiudi il menu',
-      lightMode: 'Passa al tema chiaro',
-      darkMode: 'Passa al tema scuro',
       account: 'Profilo',
       cart: 'Carrello',
       signIn: 'Accedi',
@@ -227,18 +223,16 @@ export const messages: Record<Locale, Messages> = {
     brand: { tagline: 'Upcycled accessories & bags' },
     nav: {
       home: 'Home',
-      shop: 'Shop',
+      shop: 'Bags',
       customize: 'Customize',
-      editorial: 'Editorial',
-      studio: 'Studio',
+      editorial: 'Journal',
+      studio: 'Our approach',
       accessories: 'Accessories',
       bags: 'Bags',
       tiktok: 'TikTok',
       tutorials: 'Tutorials',
       menu: 'Open menu',
       close: 'Close menu',
-      lightMode: 'Switch to light theme',
-      darkMode: 'Switch to dark theme',
       account: 'Profile',
       cart: 'Cart',
       signIn: 'Sign in',

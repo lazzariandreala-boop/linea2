@@ -1,65 +1,90 @@
 <script setup lang="ts">
 const WHATSAPP = 'https://wa.me/393401475223'
 
+const STEPS = [
+  { n: '01', title: 'Selezione', text: 'Raccogliamo jeans di seconda mano e li dividiamo per lavaggio, peso e carattere.' },
+  { n: '02', title: 'Smontaggio', text: 'Ogni capo viene scucito a mano: tasche, cuciture e passanti diventano materiale.' },
+  { n: '03', title: 'Ricomposizione', text: 'Disegniamo il pezzo intorno a ciò che il tessuto ha già: un ginocchio sbiadito, una vecchia tasca.' },
+  { n: '04', title: 'Cucitura', text: 'Cuciamo e rifiniamo con accessori in ottone, nello stesso laboratorio, una borsa alla volta.' },
+]
+
 const VALUES = [
-  { title: 'Luxury', text: 'Tagliate e cucite a mano nel nostro studio, rifinite con accessori in ottone e dettagli in pelle.' },
-  { title: 'Upcycled', text: 'Fatte con jeans di seconda mano. Ogni lavaggio, ogni sbiaditura e ogni tasca fa parte del disegno.' },
-  { title: 'Sustainable', text: 'Per le nostre borse non si tesse denim nuovo. Gli scarti diventano pochette e sacchettini di Natale.' },
+  { img: '/editorial/detail-seam.webp', title: 'Fatte a mano', text: 'Tagliate e cucite a mano, rifinite con accessori in ottone e dettagli in pelle.' },
+  { img: '/editorial/detail-patchwork.webp', title: 'Denim recuperato', text: 'Ogni lavaggio, ogni sbiaditura e ogni tasca fa parte del disegno.' },
+  { img: '/editorial/detail-brass.webp', title: 'Niente sprechi', text: 'Non si tesse denim nuovo. Gli scarti diventano pochette e sacchettini di Natale.' },
 ]
 
 useSeoHead({
-  title: 'Studio',
+  title: 'Il nostro approccio',
   description: 'La storia di Linea 2: borse e accessori cuciti a mano da jeans recuperati, un pezzo alla volta.',
 })
 </script>
 
 <template>
-  <div class="site-container py-8 sm:py-10">
-    <div class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-      <UiReveal>
-        <p class="eyebrow text-accent">Studio</p>
-        <h1 class="mt-3 text-display text-fg">One pair of jeans, one bag</h1>
-        <div class="mt-6 max-w-xl space-y-4 text-lead text-fg/75">
+  <div>
+    <section class="grid items-center lg:grid-cols-2">
+      <div class="px-(--site-gutter) py-12 sm:py-16 lg:pl-[max(var(--site-gutter),calc((100vw-78rem)/2+var(--site-gutter)))] lg:pr-16">
+        <span class="ochre-rule" aria-hidden="true" />
+        <h1 class="mt-5 text-hero">Un paio di jeans,<br />una borsa.</h1>
+        <div class="mt-6 max-w-lg space-y-4 text-lead text-fg/80">
           <p>
-            Linea 2 è nata su un tavolo di cucina, davanti a una pila di jeans troppo belli per essere buttati.
-            Ancora oggi ogni borsa viene tagliata e cucita dalle stesse mani, una alla volta.
-          </p>
-          <p>
-            Raccogliamo denim di seconda mano, lo dividiamo per lavaggio e peso, e disegniamo ogni pezzo intorno
-            a quello che il tessuto ha già: un ginocchio sbiadito, una tasca posteriore, una vecchia cucitura.
+            Linea 2 è nata su un tavolo di cucina, davanti a una pila di jeans troppo belli per essere buttati. Ancora oggi
+            ogni borsa viene tagliata e cucita dalle stesse mani, una alla volta.
           </p>
           <p>Ogni pezzo viene filmato mentre nasce: puoi guardare il tuo sui nostri canali.</p>
         </div>
         <div class="mt-8 flex flex-wrap gap-3">
-          <UiBaseButton to="/customize" variant="solid" size="lg">Customize your bag</UiBaseButton>
-          <UiBaseButton to="/editorial" variant="outline" size="lg">Editorial</UiBaseButton>
+          <UiBaseButton to="/customize" variant="solid" size="lg">Personalizza la tua</UiBaseButton>
+          <UiBaseButton to="/editorial" variant="outline" size="lg">Leggi il Journal</UiBaseButton>
         </div>
-      </UiReveal>
+      </div>
+      <img
+        src="/editorial/workbench.webp"
+        alt="Pezzi di denim recuperato sul tavolo da taglio del laboratorio"
+        width="1400"
+        height="1000"
+        class="aspect-[7/5] h-full w-full object-cover lg:rounded-l-[10px]"
+      />
+    </section>
 
-      <UiReveal :delay="120">
-        <div class="panel-glass rounded-[22px] p-6 sm:p-8">
-          <h2 class="text-title text-fg">Write to the studio</h2>
-          <p class="mt-3 text-sm text-fg/70">
-            Domande su un ordine, un pezzo su misura o la vendita all'ingrosso. Rispondiamo entro due giorni lavorativi.
+    <section class="band py-14 sm:py-16">
+      <div class="site-container">
+        <UiSectionHeading title="Come nasce una borsa" subtitle="Quattro passaggi, tutti nel nostro laboratorio." />
+        <ol class="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <li v-for="s in STEPS" :key="s.n" class="rounded-card bg-surface p-6 shadow-card">
+            <span class="font-mono text-xs text-accent">{{ s.n }}</span>
+            <h3 class="mt-3 font-display text-xl">{{ s.title }}</h3>
+            <p class="mt-2 text-sm text-muted">{{ s.text }}</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="site-container py-14 sm:py-16">
+      <UiSectionHeading title="In cosa crediamo" />
+      <ul class="mt-9 grid gap-6 sm:grid-cols-3">
+        <li v-for="v in VALUES" :key="v.title">
+          <img :src="v.img" :alt="v.title" width="1200" height="800" loading="lazy" class="aspect-[3/2] w-full rounded-card object-cover" />
+          <h3 class="mt-4 font-display text-lg">{{ v.title }}</h3>
+          <p class="mt-1 text-sm text-muted">{{ v.text }}</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="site-container pb-14 sm:pb-16">
+      <div class="on-denim grid gap-6 rounded-panel p-8 sm:p-12 md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <span class="ochre-rule" aria-hidden="true" />
+          <h2 class="mt-5 text-title">Scrivi al laboratorio</h2>
+          <p class="mt-3 max-w-lg text-fg/80">
+            Domande su un ordine, un pezzo su misura o la vendita all’ingrosso. Rispondiamo entro due giorni lavorativi.
           </p>
-          <a
-            :href="WHATSAPP"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-solid label-caps mt-6 inline-flex h-11 items-center rounded-pill px-6 text-sm"
-          >
-            Scrivici su WhatsApp
-          </a>
-          <p class="mt-4 font-mono text-[11px] text-muted">Instagram · TikTok: @linea2.upcycling</p>
+          <p class="mt-4 font-mono text-xs text-muted">Instagram · TikTok: @linea2.upcycling</p>
         </div>
-      </UiReveal>
-    </div>
-
-    <ul class="mt-10 grid gap-px overflow-hidden rounded-card border border-fg/10 bg-fg/10 sm:grid-cols-3">
-      <li v-for="v in VALUES" :key="v.title" class="bg-bg p-6">
-        <h3 class="text-sm tracking-[0.12em] text-brass-hi">{{ v.title }}</h3>
-        <p class="mt-3 text-sm text-fg/70">{{ v.text }}</p>
-      </li>
-    </ul>
+        <UiBaseButton :href="WHATSAPP" target="_blank" rel="noopener noreferrer" variant="solid" size="lg">
+          Scrivici su WhatsApp
+        </UiBaseButton>
+      </div>
+    </section>
   </div>
 </template>

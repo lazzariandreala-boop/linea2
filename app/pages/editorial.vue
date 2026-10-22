@@ -14,7 +14,7 @@ const CHANNELS = [
 ]
 
 useSeoHead({
-  title: 'Editorial',
+  title: 'Journal',
   description: 'Video, tutorial e dietro le quinte dallo studio Linea 2: guarda come nasce ogni borsa.',
 })
 </script>
@@ -23,9 +23,8 @@ useSeoHead({
   <div class="site-container py-8 sm:py-10">
     <UiReveal>
       <UiSectionHeading
-        eyebrow="Editorial"
-        title="Made on camera"
-        subtitle="Ogni borsa viene filmata mentre la cuciamo. Qui trovi i video dai nostri canali, i tutorial e le storie dello studio."
+        title="Journal"
+        subtitle="Storie dal laboratorio, tutorial di stile e cura, e i video di ogni borsa mentre la cuciamo."
         as="h1"
       />
     </UiReveal>
@@ -36,13 +35,13 @@ useSeoHead({
           :href="ch.href"
           target="_blank"
           rel="noopener noreferrer"
-          class="panel-glass flex items-center justify-between gap-4 rounded-card px-5 py-4 transition-colors hover:border-brass/60"
+          class="panel-glass flex items-center justify-between gap-4 rounded-card px-5 py-4 transition-colors hover:border-fg/40"
         >
           <span>
             <span class="label-caps block text-sm text-fg">{{ ch.name }}</span>
             <span class="mt-1 block text-xs text-muted">{{ ch.note }}</span>
           </span>
-          <span class="font-mono text-xs text-brass-hi">{{ ch.handle }} ↗</span>
+          <span class="font-mono text-xs text-accent">{{ ch.handle }} ↗</span>
         </a>
       </li>
     </ul>
@@ -50,7 +49,7 @@ useSeoHead({
     <section class="mt-10">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">TikTok</h2>
-        <NuxtLink to="/tiktok" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
+        <NuxtLink to="/tiktok" class="arrow-link">
           {{ t((m) => m.common.viewAll) }}
         </NuxtLink>
       </div>
@@ -69,7 +68,7 @@ useSeoHead({
           :href="`https://www.instagram.com/${feed.handles.instagram}/`"
           target="_blank"
           rel="noopener noreferrer"
-          class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg"
+          class="arrow-link"
         >
           @{{ feed.handles.instagram }} ↗
         </a>
@@ -82,7 +81,7 @@ useSeoHead({
     <section v-if="guides.length" class="mt-10">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">{{ t((m) => m.nav.tutorials) }}</h2>
-        <NuxtLink to="/tutorials" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
+        <NuxtLink to="/tutorials" class="arrow-link">
           {{ t((m) => m.common.viewAll) }}
         </NuxtLink>
       </div>

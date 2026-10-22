@@ -6,10 +6,10 @@ import { PRODUCTS } from './products.mock'
 export const HOME_PAGE: HomePage = {
   id: 1,
   documentId: 'home_singleton',
-  heroEyebrow: 'Novità · La borsa Stella',
-  heroHeadline: 'Denim ricostruito,\nsu misura',
+  heroEyebrow: '',
+  heroHeadline: 'Il denim ha una\nseconda vita.',
   heroSubline:
-    'Ogni pezzo Linea 2 nasce da un paio di jeans che nessuno indossa più. Lo smontiamo a mano e lo ricuciamo in una borsa che esiste una volta sola. Scegli lavaggio, fodera e dettagli, e guardala prendere forma mentre la componi.',
+    'Borse artigianali, uniche e su misura, realizzate con denim recuperato e ricucito per dare nuova forma a ciò che il tempo ha già vissuto.',
   heroMedia: media('stella-hero_5e11a0.jpg', 1600, 1000, 'Borsa Stella in denim con toppa patchwork'),
   heroGradient: gradient('#f2643d', '#d24a26', '#4d3568', 145),
   featuredProducts: PRODUCTS.filter((p) => p.featured),

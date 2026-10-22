@@ -51,16 +51,16 @@ const profileUrl = computed(() => `https://www.instagram.com/${props.handle}/`)
     :href="profileUrl"
     target="_blank"
     rel="noopener noreferrer"
-    class="card-depth group flex min-h-[240px] flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-linear-to-br from-brass via-[#5b4a33] to-raw p-6 text-center shadow-card"
+    class="group flex min-h-[220px] flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-ochre p-6 text-center text-denim"
   >
-    <span class="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-black/25 text-white">
+    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-denim/40">
       <SocialIcon name="instagram" class="h-7 w-7" />
     </span>
     <span>
-      <span class="block font-mono text-sm text-white">@{{ handle }}</span>
-      <span class="mt-2 block max-w-xs text-sm text-white/80">Foto dei pezzi finiti, Reels e dietro le quinte dello studio.</span>
+      <span class="block font-mono text-sm">@{{ handle }}</span>
+      <span class="mt-2 block max-w-xs text-sm text-denim/80">Foto dei pezzi finiti, Reels e dietro le quinte dello studio.</span>
     </span>
-    <span class="label-caps relative z-10 rounded-full border border-white/50 px-5 py-2 text-xs text-white transition-colors group-hover:bg-white/10">
+    <span class="label-caps rounded-lg border border-denim/50 px-5 py-2 text-xs transition-colors group-hover:bg-denim group-hover:text-ochre">
       Segui su Instagram ↗
     </span>
   </a>

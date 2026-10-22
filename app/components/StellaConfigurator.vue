@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Bag configurator. Layout and copy follow Andrea's mockup: the bag over a
- * blurred atelier backdrop on the left, a glass inspector with numbered
+ * warm studio backdrop on the left, an inspector panel with numbered
  * sections on the right, live price and "Add to bag".
  *
  * The bag is shown as pre-rendered 2D images (public/bags2d, made by
@@ -43,7 +43,7 @@ import {
   type StellaState,
 } from '~/utils/stella/options'
 import { FRAMES } from '~/utils/stella/frames'
-import { monoCanvas, paintBackdrop, patchCanvas, swatchURL } from '~/utils/stella/textures'
+import { monoCanvas, patchCanvas, swatchURL } from '~/utils/stella/textures'
 
 type DecalKind = 'patch' | 'mono'
 
@@ -62,7 +62,7 @@ const price = computed(() => stellaPrice(state))
 /** Option groups this bag supports (hardware needs separate rings). */
 const groups = computed(() => STELLA_GROUPS.filter((g) => g.key !== 'hw' || hasHardware(bag.value)))
 type TabKey = StellaGroup | 'model'
-const tabs = computed<{ key: TabKey; tab: string }[]>(() => [{ key: 'model', tab: 'Bag' }, ...groups.value])
+const tabs = computed<{ key: TabKey; tab: string }[]>(() => [{ key: 'model', tab: 'Modello' }, ...groups.value])
 
 function pickModel(id: string) {
   if (id === state.model) return
@@ -184,7 +184,6 @@ const zoomed = ref(false)
 const showHint = ref(true)
 const showAr = ref(false)
 const show3d = ref(false)
-const backdrop = ref<HTMLCanvasElement | null>(null)
 const stageEl = ref<HTMLElement | null>(null)
 
 const FALLBACK_FRAME: Frame = { x0: 0.15, x1: 0.85, y0: 0.85, y1: 0.15, w: 1 }
@@ -368,7 +367,6 @@ function preload() {
 watch(() => [state.model, state.wash.join(), state.lining, state.hw], preload)
 
 onMounted(() => {
-  if (backdrop.value) paintBackdrop(backdrop.value)
   preload()
   const ready = document.fonts?.ready ?? Promise.resolve()
   void ready.then(() => {
@@ -425,7 +423,7 @@ async function thumbnail(snap: StellaState): Promise<string | null> {
   const c = document.createElement('canvas')
   c.width = c.height = S
   const g = c.getContext('2d')!
-  g.fillStyle = '#8b8277'
+  g.fillStyle = '#ebe3d4'
   g.fillRect(0, 0, S, S)
   g.drawImage(body, 0, 0, S, S)
   g.drawImage(dc, 0, 0)
@@ -464,7 +462,6 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   <div class="stella">
     <div class="stage">
       <section class="viewport" :aria-label="`Anteprima della borsa ${bag.name}`">
-        <canvas ref="backdrop" class="backdrop" aria-hidden="true" />
         <div class="bag-wrap" :class="{ zoomed }">
           <div ref="stageEl" class="bag2d">
             <img
@@ -505,7 +502,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         <div class="vp-ui">
           <button class="ar-pill v3d-pill" type="button" @click="show3d = true">
             <svg viewBox="0 0 24 24"><path d="M12 3 4.5 7.3v9.4L12 21l7.5-4.3V7.3L12 3Zm0 0v9m0 0 7.5-4.7M12 12 4.5 7.3M12 12v9" /></svg>
-            <span>VIEW IN 3D</span>
+            <span>VEDI IN 3D</span>
           </button>
           <div class="vp-top">
             <a class="icon-btn" :href="INSTAGRAM" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
@@ -516,7 +513,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
             </a>
             <button class="ar-pill" type="button" :aria-expanded="showAr" @click="showAr = !showAr">
               <svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3m0 8v3a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2v-3" /></svg>
-              <span>VIEW IN AR</span>
+              <span>VEDI IN AR</span>
             </button>
           </div>
           <div v-if="showAr" class="toast panel-glass" role="status">
@@ -529,7 +526,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
           </p>
 
           <div class="summary panel-glass" aria-live="polite">
-            <h2>Summary</h2>
+            <h2>Riepilogo</h2>
             <div class="sum-grid">
               <div v-for="it in summary" :key="it.key" class="sum-item">
                 <span class="sw" :style="swatches[it.key] ? { backgroundImage: `url(${swatches[it.key]})` } : undefined" />
@@ -555,7 +552,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
       </section>
 
       <aside class="inspector panel-glass" aria-label="Personalizza la borsa">
-        <h1 class="ttl">Customize your {{ bag.name }} bag</h1>
+        <h1 class="ttl">Personalizza la tua {{ bag.name }}</h1>
         <div class="tabs" role="tablist">
           <button
             v-for="(g, i) in tabs"
@@ -571,7 +568,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 
         <div ref="scroller" class="scroll" @scroll.passive="onScroll">
           <div id="stella-g-model" class="grp">
-            <h3>1. Bag model</h3>
+            <h3>1. Modello</h3>
             <div class="sws bags">
               <button
                 v-for="b in BAGS"
@@ -632,10 +629,10 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 <button type="button" class="prm" :aria-label="`Rimuovi toppa ${pi + 1}`" @click.stop="removePatch(pi)">×</button>
               </div>
               <button type="button" class="padd" :disabled="state.patches.length >= STELLA_MAX_PATCHES" @click="newPatch">
-                + ADD A PATCH
+                + AGGIUNGI UNA TOPPA
               </button>
               <p class="note">
-                Drag each patch on the bag to place it; F/R puts it on the front or the back (up to {{ STELLA_MAX_PATCHES }}). Each patch is priced on its own.
+                Trascina ogni toppa sulla borsa per posizionarla; F/R la mette sul fronte o sul retro (fino a {{ STELLA_MAX_PATCHES }}). Ogni toppa ha il suo prezzo.
               </p>
             </div>
             <div v-else class="sws">
@@ -656,13 +653,13 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
               </button>
             </div>
             <p v-if="g.key === 'wash'" class="note">
-              {{ maxWashes(bag) > 1 ? 'Up to two washes: the second one goes on strap and tab.' : 'One wash for the whole bag.' }}
+              {{ maxWashes(bag) > 1 ? 'Fino a due lavaggi: il secondo va su tracolla e linguetta.' : 'Un solo lavaggio per tutta la borsa.' }}
             </p>
-            <p v-if="g.key === 'lining'" class="note">The bag opens on the view from the top, so you can see the lining inside.</p>
+            <p v-if="g.key === 'lining'" class="note">La borsa si apre nella vista dall’alto, così vedi la fodera all’interno.</p>
             <template v-if="g.key === 'finish'">
-              <p class="note">Every bag carries its monogram: drag it on the bag to choose where it goes.</p>
+              <p class="note">Ogni borsa ha il suo monogramma: trascinalo sulla borsa per scegliere dove metterlo.</p>
               <div class="mono-side">
-                <span>Monogram on the</span>
+                <span>Monogramma sul</span>
                 <div class="psize pside" role="group" aria-label="Lato del monogramma">
                   <button
                     v-for="s in SIDES"
@@ -677,7 +674,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 </div>
               </div>
               <label class="ini" for="stella-initials">
-                Custom initials
+                Iniziali
                 <input
                   id="stella-initials"
                   type="text"
@@ -697,11 +694,11 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         <div class="buy">
           <div class="price-row">
             <span class="price" aria-live="polite">{{ fmt(price) }}</span>
-            <button type="button" class="link" @click="show3d = true">VIEW IN 3D</button>
+            <button type="button" class="link" @click="show3d = true">VEDI IN 3D</button>
           </div>
-          <button type="button" class="add" @click="addToBag">ADD TO BAG</button>
+          <button type="button" class="add" @click="addToBag">AGGIUNGI AL CARRELLO</button>
           <p v-if="added" class="added" role="status">
-            Added to your bag · <NuxtLink to="/cart" class="underline">view bag</NuxtLink>
+            Aggiunta al carrello · <NuxtLink to="/cart" class="underline">vedi carrello</NuxtLink>
           </p>
         </div>
       </aside>
@@ -719,7 +716,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 
 <style scoped>
 .stella {
-  --line: rgb(255 255 255 / 0.16);
+  --line: rgb(20 40 58 / 0.14);
   color: var(--color-fg);
   font-size: 13px;
   line-height: 1.35;
@@ -735,15 +732,10 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   height: 610px;
   border-radius: var(--radius-card);
   overflow: hidden;
-  background: #8b8277;
-}
-.backdrop {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  object-fit: cover;
+  /* Studio: lit ivory wall over a linen table, light from the left. */
+  background:
+    radial-gradient(80% 70% at 18% 8%, rgb(255 250 240 / 0.7), transparent 60%),
+    linear-gradient(180deg, #e9e1d2 0%, #f1ebe0 68%, #e2d8c7 68.4%, #d6cab6 100%);
 }
 .bag-wrap {
   position: absolute;
@@ -817,7 +809,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   text-align: center;
   padding: 10px 14px;
   border-radius: 10px;
-  background: rgb(22 22 22 / 0.6);
+  background: rgb(20 40 58 / 0.6);
   color: #fff;
   font-size: 12px;
   pointer-events: none;
@@ -825,7 +817,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .icon-btn,
 .ar-pill,
 .vp-ctrl button {
-  background: rgb(22 22 22 / 0.82);
+  background: rgb(20 40 58 / 0.82);
   border: 0;
   cursor: pointer;
   color: #fff;
@@ -968,8 +960,8 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   transform: translateX(-50%);
   font: 400 10.5px/1 var(--font-body);
   letter-spacing: 0.04em;
-  color: rgb(255 255 255 / 0.78);
-  background: rgb(22 22 22 / 0.5);
+  color: rgb(244 240 231 / 0.9);
+  background: rgb(20 40 58 / 0.5);
   padding: 6px 10px;
   border-radius: 99px;
   pointer-events: none !important;
@@ -987,7 +979,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .ttl {
   margin: 0;
   text-align: center;
-  font: 500 15.5px/1.2 var(--font-display);
+  font: 400 21px/1.2 var(--font-display);
   letter-spacing: 0.06em;
 }
 .tabs {
@@ -1020,7 +1012,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   overflow-y: auto;
   padding-top: 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+  scrollbar-color: rgb(20 40 58 / 0.2) transparent;
 }
 .grp {
   padding-bottom: 6px;
@@ -1054,7 +1046,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 1px solid rgb(255 255 255 / 0.25);
+  border: 1px solid rgb(20 40 58 / 0.18);
   background-color: var(--color-surface-2);
   background-size: cover;
   background-position: center;
@@ -1101,7 +1093,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   gap: 8px 6px;
 }
 .sw.bag {
-  background-color: #8b8277;
+  background-color: #ebe3d4;
   background-size: cover;
 }
 .swb small {
@@ -1257,17 +1249,17 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   cursor: pointer;
 }
 .add {
-  height: 44px;
-  border-radius: 22px;
+  height: 48px;
+  border-radius: 8px;
   border: 0;
-  background: var(--color-cream);
-  color: var(--color-raw);
-  font: 400 13.5px/1 var(--font-body);
-  letter-spacing: 0.06em;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: 700 12.5px/1 var(--font-body);
+  letter-spacing: 0.14em;
   cursor: pointer;
 }
 .add:hover {
-  background: #fff;
+  background: var(--color-primary-strong);
 }
 .added {
   font-size: 11px;
@@ -1285,7 +1277,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .views button {
   height: 30px;
   padding: 0 16px;
-  border-radius: 15px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: none;
   color: var(--color-muted);
@@ -1296,26 +1288,12 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 }
 .views button[aria-pressed='true'] {
   color: var(--color-fg);
-  border-color: var(--color-brass-hi);
-  background: rgb(0 0 0 / 0.18);
+  border-color: var(--color-fg);
+  background: var(--color-surface);
 }
 
-/* Light theme: inspector text sits on white glass */
-:root[data-theme='light'] .stella {
-  --line: rgb(140 58 23 / 0.18);
-}
-:root[data-theme='light'] .add {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-:root[data-theme='light'] .add:hover {
-  background: var(--color-primary-strong);
-}
-:root[data-theme='light'] .sw {
-  border-color: rgb(140 58 23 / 0.2);
-}
-:root[data-theme='light'] .ini input {
-  background: rgb(255 255 255 / 0.6);
+.ini input {
+  background: var(--color-bg);
 }
 
 @media (max-width: 1100px) {

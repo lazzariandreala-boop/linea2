@@ -44,7 +44,7 @@ onBeforeUnmount(() => timer && clearTimeout(timer))
     v-if="icon"
     v-show="purchasable"
     type="button"
-    class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary shadow-card transition-transform duration-200 ease-out-soft hover:bg-primary-strong active:scale-90"
+    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-on-primary transition-transform duration-200 ease-out-soft hover:bg-primary-strong active:scale-90"
     :aria-label="t((m) => m.cart.addToCart)"
     :title="t((m) => m.cart.addToCart)"
     @click="onAdd"

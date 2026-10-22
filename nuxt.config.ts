@@ -37,8 +37,8 @@ export default defineNuxtConfig({
   // Design-system fonts, self-hosted (no request to Google: GDPR-friendly and
   // works in in-app webviews). Latin subsets only.
   css: [
-    '@fontsource/cinzel/latin-500.css',
-    '@fontsource/cinzel/latin-600.css',
+    '@fontsource-variable/newsreader/opsz.css',
+    '@fontsource-variable/newsreader/opsz-italic.css',
     '@fontsource/cormorant-garamond/latin-500.css',
     '@fontsource/cormorant-garamond/latin-600.css',
     '@fontsource-variable/nunito/wght.css',
@@ -134,21 +134,11 @@ export default defineNuxtConfig({
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover',
         },
-        { name: 'theme-color', content: '#121a2c' },
+        { name: 'theme-color', content: '#14283a' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-      ],
-      script: [
-        {
-          // No-FOUC theme boot: set <html data-theme> before first paint from
-          // the stored choice; dark is the brand default (Stella mockup).
-          // Kept in sync at runtime by useTheme(). Must stay dependency-free.
-          tagPosition: 'head',
-          innerHTML:
-            "(function(){try{var k='linea2-theme',s=localStorage.getItem(k),t=s==='light'?'light':'dark';document.documentElement.dataset.theme=t;}catch(e){}})();",
-        },
       ],
     },
   },

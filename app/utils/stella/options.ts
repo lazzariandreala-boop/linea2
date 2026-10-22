@@ -200,11 +200,11 @@ export const FINISH: StellaOption[] = [
 ]
 
 export const STELLA_GROUPS: { key: StellaGroup; tab: string; title: string; list: StellaOption[] }[] = [
-  { key: 'wash', tab: 'Denim wash', title: 'Base Denim', list: WASH },
-  { key: 'lining', tab: 'Lining', title: 'Interior', list: LINING },
-  { key: 'patch', tab: 'Patches', title: 'Patchwork', list: PATCH },
-  { key: 'hw', tab: 'Hardware', title: 'Hardware', list: HW },
-  { key: 'finish', tab: 'Monogram', title: 'Monogram', list: FINISH },
+  { key: 'wash', tab: 'Lavaggio', title: 'Lavaggio del denim', list: WASH },
+  { key: 'lining', tab: 'Fodera', title: 'Fodera', list: LINING },
+  { key: 'patch', tab: 'Toppe', title: 'Toppe patchwork', list: PATCH },
+  { key: 'hw', tab: 'Metalli', title: 'Accessori in metallo', list: HW },
+  { key: 'finish', tab: 'Monogramma', title: 'Monogramma', list: FINISH },
 ]
 
 /** Look up an option by id, falling back to the first entry. */

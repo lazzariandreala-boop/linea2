@@ -8,12 +8,11 @@ const videos = computed(() => feed.value.tiktok.slice(0, 4))
 </script>
 
 <template>
-  <section class="site-container py-10 sm:py-12">
+  <section class="site-container border-t border-fg/10 py-14 sm:py-16">
     <UiReveal>
       <div class="flex flex-wrap items-end justify-between gap-4">
         <UiSectionHeading
-          eyebrow="Social"
-          title="Follow the studio"
+          title="Dal laboratorio, ogni giorno"
           subtitle="Ogni borsa nasce davanti alla telecamera. Seguici per vedere i nuovi pezzi prima di tutti."
         />
         <div class="flex gap-2">
@@ -23,7 +22,7 @@ const videos = computed(() => feed.value.tiktok.slice(0, 4))
             :href="profileUrl[p]"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex h-11 w-11 items-center justify-center rounded-full border border-fg/20 text-fg transition-colors hover:border-brass hover:text-brass-hi"
+            class="flex h-11 w-11 items-center justify-center rounded-lg border border-fg/20 text-fg transition-colors hover:border-fg/50"
             :aria-label="p === 'tiktok' ? 'Linea 2 su TikTok' : 'Linea 2 su Instagram'"
           >
             <SocialIcon :name="p" class="h-5 w-5" />
@@ -33,7 +32,7 @@ const videos = computed(() => feed.value.tiktok.slice(0, 4))
     </UiReveal>
 
     <!-- Not wrapped in UiReveal: a transformed parent can stall the TikTok iframe. -->
-    <div class="mt-8 grid gap-4">
+    <div class="mt-9 grid gap-4">
       <div v-if="videos.length" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SocialVideoCard v-for="post in videos" :key="post.id" :post="post" />
       </div>
@@ -42,9 +41,7 @@ const videos = computed(() => feed.value.tiktok.slice(0, 4))
     </div>
 
     <div class="mt-6 text-right">
-      <NuxtLink to="/editorial" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
-        Tutti i video →
-      </NuxtLink>
+      <NuxtLink to="/editorial" class="arrow-link">Tutti i video</NuxtLink>
     </div>
   </section>
 </template>
