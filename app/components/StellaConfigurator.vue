@@ -1,9 +1,13 @@
 <script setup lang="ts">
 /**
- * Stella bag configurator (WebGL + canvas: mount it inside <ClientOnly>). Layout and copy follow
- * Andrea's mockup: 3D viewport over a blurred atelier backdrop on the left, a
- * glass inspector with five numbered sections on the right, live price and
- * "Add to bag" that drops a made-to-order line into the cart.
+ * Bag configurator. Layout and copy follow Andrea's mockup: the bag over a
+ * blurred atelier backdrop on the left, a glass inspector with numbered
+ * sections on the right, live price and "Add to bag".
+ *
+ * The bag is shown as pre-rendered 2D images (public/bags2d, made by
+ * `npm run render:bags2d`): front, back and an open view from the top for the
+ * lining. Patches and the monogram are HTML layers dragged on the image. The
+ * 3D model only loads if the customer asks for it ("View in 3D").
  */
 import {
   BAGS,
@@ -11,6 +15,7 @@ import {
   HW,
   LINING,
   PATCH,
+  PATCH_SCALE,
   STELLA_GROUPS,
   STELLA_INITIALS_PRICE,
   STELLA_MAX_PATCHES,
@@ -29,13 +34,18 @@ import {
   stellaPrice,
   toggleWash,
   withModel,
+  type BagView,
+  type Frame,
   type PatchSize,
+  type Placement,
   type StellaGroup,
   type StellaOption,
   type StellaState,
 } from '~/utils/stella/options'
-import { paintBackdrop, swatchURL } from '~/utils/stella/textures'
-import { createStellaScene, type DecalKind, type StellaScene } from '~/utils/stella/scene'
+import { FRAMES } from '~/utils/stella/frames'
+import { monoCanvas, paintBackdrop, patchCanvas, swatchURL } from '~/utils/stella/textures'
+
+type DecalKind = 'patch' | 'mono'
 
 const { addLine } = useCart()
 const route = useRoute()
@@ -70,10 +80,11 @@ watch(
 const fmt = (n: number) => `€${n.toFixed(2)}`
 
 // ── Swatches (painted once fonts are ready, so the "L2" serif renders) ────
-const swatches = ref<Record<string, string>>({})
+// Wash swatches are static files: weaving eight denims on load is wasted work.
+const swatches = ref<Record<string, string>>(Object.fromEntries(WASH.map((w) => [`wash:${w.id}`, `/bags2d/swatches/wash-${w.id}.png`])))
 function paintSwatches() {
-  const out: Record<string, string> = {}
-  for (const g of STELLA_GROUPS) for (const o of g.list) out[`${g.key}:${o.id}`] = swatchURL(g.key, o)
+  const out = { ...swatches.value }
+  for (const g of STELLA_GROUPS) if (g.key !== 'wash') for (const o of g.list) out[`${g.key}:${o.id}`] = swatchURL(g.key, o)
   swatches.value = out
 }
 
@@ -84,21 +95,37 @@ function isSelected(group: SimpleGroup, id: string) {
 function pick(group: SimpleGroup, id: string) {
   if (group === 'wash') state.wash = toggleWash(state.wash, id, maxWashes(bag.value))
   else state[group] = id
-  // Show the lining while choosing it.
-  if (group === 'lining') inside.value = true
+  // Show the lining while choosing it, the outside for everything else.
+  if (group === 'lining') view.value = 'top'
+  else if (view.value === 'top') view.value = 'front'
 }
 
 // ── Patches and monogram (placed by dragging them on the bag) ─────────────
 const SIZES: PatchSize[] = ['S', 'M', 'L']
+const SIDES = [
+  { id: 'front', label: 'F', name: 'Fronte' },
+  { id: 'back', label: 'R', name: 'Retro' },
+] as const
 const selected = ref<{ kind: DecalKind; index: number } | null>(null)
+function select(kind: DecalKind, index: number) {
+  selected.value = { kind, index }
+  const at = kind === 'mono' ? state.mono : state.patches[index]
+  if (at) view.value = at.side
+}
 function newPatch() {
   state.patches = addPatch(state)
-  selected.value = { kind: 'patch', index: state.patches.length - 1 }
-  inside.value = false
+  const pt = state.patches[state.patches.length - 1]
+  // New patches go on the side being looked at.
+  if (pt && view.value === 'back') pt.side = 'back'
+  select('patch', state.patches.length - 1)
 }
 function removePatch(i: number) {
   state.patches.splice(i, 1)
   selected.value = null
+}
+function setSide(at: Placement, side: Placement['side']) {
+  at.side = side
+  view.value = side
 }
 function ariaLabel(o: StellaOption) {
   return o.p ? `${o.name}, più ${o.p} euro` : o.name
@@ -146,85 +173,267 @@ function onScroll() {
   activeTab.value = cur
 }
 
-// ── 3D viewport ───────────────────────────────────────────────────────────
-const host = ref<HTMLElement | null>(null)
-const backdrop = ref<HTMLCanvasElement | null>(null)
-const status = ref<'loading' | 'ready' | 'error'>('loading')
-const view = ref(0)
+// ── 2D stage: stacked images per view, decals on top ─────────────────────
+const VIEWS: { id: BagView; name: string }[] = [
+  { id: 'front', name: 'Fronte' },
+  { id: 'back', name: 'Retro' },
+  { id: 'top', name: 'Interno' },
+]
+const view = ref<BagView>('front')
 const zoomed = ref(false)
-const spinning = ref(false)
 const showHint = ref(true)
 const showAr = ref(false)
-const inside = ref(false)
-let scene: StellaScene | null = null
+const show3d = ref(false)
+const backdrop = ref<HTMLCanvasElement | null>(null)
+const stageEl = ref<HTMLElement | null>(null)
 
-watch(state, () => scene?.apply(snapshot()), { deep: true })
-watch(zoomed, (z) => scene?.setZoom(z))
-watch(spinning, (s) => scene?.setSpin(s))
-watch(inside, (on) => scene?.setInside(on))
+const FALLBACK_FRAME: Frame = { x0: 0.15, x1: 0.85, y0: 0.85, y1: 0.15, w: 1 }
+const frame = computed(() => FRAMES[bag.value.id]?.[view.value] ?? FALLBACK_FRAME)
+const dir = computed(() => `/bags2d/${bag.value.id}`)
+const bodyWash = computed(() => state.wash[0] ?? 'indigo')
+
+/** Images stacked bottom to top; the first one (body) also masks the decals. */
+const layers = computed(() => {
+  const d = dir.value
+  const v = view.value
+  if (v === 'top') return [`${d}/top-${bodyWash.value}-${state.lining}.webp`]
+  if (bag.value.kind !== 'parts') return [`${d}/${v}-all-${bodyWash.value}.webp`]
+  return [`${d}/${v}-body-${bodyWash.value}.webp`]
+})
+/** Strap, tab and rings: drawn above the decals (they pass in front of the body). */
+const overLayers = computed(() => {
+  if (view.value === 'top' || bag.value.kind !== 'parts') return []
+  const d = dir.value
+  const v = view.value
+  return [`${d}/${v}-accent-${state.wash[1] ?? bodyWash.value}.webp`, `${d}/${v}-hw-${state.hw}.webp`]
+})
+
+const imgState = ref<'loading' | 'ready' | 'error'>('loading')
+watch(layers, () => (imgState.value = 'loading'))
+function onImg(ok: boolean) {
+  imgState.value = ok ? 'ready' : 'error'
+  if (ok) void loadMask(layers.value[0]!)
+}
+
+// Alpha of the body image, to keep decals on the cloth while dragging.
+let mask: { src: string; data: Uint8ClampedArray; n: number } | null = null
+const MASK_N = 200
+async function loadMask(src: string) {
+  if (mask?.src === src) return
+  const img = new Image()
+  img.src = src
+  try {
+    await img.decode()
+  } catch {
+    return
+  }
+  const c = document.createElement('canvas')
+  c.width = c.height = MASK_N
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.drawImage(img, 0, 0, MASK_N, MASK_N)
+  mask = { src, data: g.getImageData(0, 0, MASK_N, MASK_N).data, n: MASK_N }
+}
+function onCloth(fx: number, fy: number): boolean {
+  if (!mask) return true
+  const x = Math.min(mask.n - 1, Math.max(0, Math.floor(fx * mask.n)))
+  const y = Math.min(mask.n - 1, Math.max(0, Math.floor(fy * mask.n)))
+  return mask.data[(y * mask.n + x) * 4 + 3]! > 128
+}
+
+/** Decal size as fractions of the body box (u, v) and of the image (x, y). */
+function decalBox(kind: DecalKind, size: PatchSize = 'L') {
+  const f = frame.value
+  const bw = Math.abs(f.x1 - f.x0)
+  const bh = Math.abs(f.y0 - f.y1)
+  if (kind === 'mono') {
+    const w = bw * bag.value.mono.w
+    return { u: bag.value.mono.w, v: (w * 0.5) / bh, w, h: w * 0.5 }
+  }
+  const s = PATCH_SCALE[size]
+  return { u: bag.value.patch.w * s, v: bag.value.patch.h * s, w: bw * bag.value.patch.w * s, h: bh * bag.value.patch.h * s }
+}
+const pct = (n: number) => `${(n * 100).toFixed(3)}%`
+function decalStyle(kind: DecalKind, at: Placement, size?: PatchSize) {
+  const f = frame.value
+  const b = decalBox(kind, size)
+  return {
+    left: pct(f.x0 + at.u * (f.x1 - f.x0) - b.w / 2),
+    top: pct(f.y0 + at.v * (f.y1 - f.y0) - b.h / 2),
+    width: pct(b.w),
+    height: pct(b.h),
+  }
+}
+
+// Decal art, cached per look (the denim weave is the costly part).
+const artCache = new Map<string, string>()
+function patchArtURL(style: string): string {
+  const key = `${bag.value.id}|${style}|${bodyWash.value}`
+  let url = artCache.get(key)
+  if (!url) {
+    const fb = FRAMES[bag.value.id]?.front ?? FALLBACK_FRAME
+    const l = decalBox('patch', 'L')
+    // Same weave scale as the 3D decal: TILE scene units per denim tile.
+    const wScene = fb.w * bag.value.patch.w
+    url = patchCanvas(style, bodyWash.value, l.h / l.w, (0.32 * 1024) / wScene).toDataURL('image/webp', 0.85)
+    artCache.set(key, url)
+  }
+  return url
+}
+const fontsReady = ref(false)
+const monoURL = computed(() => {
+  void fontsReady.value // repaint once the serif has loaded
+  return monoCanvas(state.finish, state.initials).toDataURL()
+})
+
+const decals = computed(() => {
+  if (view.value === 'top') return []
+  const out: { key: string; kind: DecalKind; index: number; src: string; style: Record<string, string>; label: string }[] = []
+  state.patches.forEach((pt, i) => {
+    if (pt.side !== view.value) return
+    out.push({ key: `p${i}`, kind: 'patch', index: i, src: patchArtURL(pt.style), style: decalStyle('patch', pt, pt.size), label: `Toppa ${i + 1}` })
+  })
+  if (state.mono.side === view.value) {
+    out.push({ key: 'mono', kind: 'mono', index: 0, src: monoURL.value, style: decalStyle('mono', state.mono), label: 'Monogramma' })
+  }
+  return out
+})
+
+// Dragging: pointer position → (u, v) on the body box, kept on the cloth.
+let drag: { kind: DecalKind; index: number; du: number; dv: number; id: number } | null = null
+function toUV(e: PointerEvent) {
+  const r = stageEl.value!.getBoundingClientRect()
+  const fx = (e.clientX - r.left) / r.width
+  const fy = (e.clientY - r.top) / r.height
+  const f = frame.value
+  return { fx, fy, u: (fx - f.x0) / (f.x1 - f.x0), v: (fy - f.y0) / (f.y1 - f.y0) }
+}
+function target(kind: DecalKind, index: number) {
+  return kind === 'mono' ? state.mono : state.patches[index]
+}
+function onDecalDown(e: PointerEvent, kind: DecalKind, index: number) {
+  const at = target(kind, index)
+  if (!at || !stageEl.value) return
+  e.preventDefault()
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  const p = toUV(e)
+  drag = { kind, index, du: at.u - p.u, dv: at.v - p.v, id: e.pointerId }
+  selected.value = { kind, index }
+  goTab(kind === 'mono' ? 'finish' : 'patch')
+  showHint.value = false
+}
+const r3 = (n: number) => Math.round(n * 1000) / 1000
+function onDecalMove(e: PointerEvent) {
+  if (!drag || e.pointerId !== drag.id) return
+  const at = target(drag.kind, drag.index)
+  if (!at) return
+  const p = toUV(e)
+  const b = decalBox(drag.kind, 'size' in at ? (at as { size: PatchSize }).size : undefined)
+  const u = Math.min(1 - b.u / 2, Math.max(b.u / 2, p.u + drag.du))
+  const v = Math.min(1 - b.v / 2, Math.max(b.v / 2, p.v + drag.dv))
+  const f = frame.value
+  if (!onCloth(f.x0 + u * (f.x1 - f.x0), f.y0 + v * (f.y1 - f.y0))) return
+  at.u = r3(u)
+  at.v = r3(v)
+}
+function onDecalUp(e: PointerEvent) {
+  if (drag && e.pointerId === drag.id) drag = null
+}
+/** Arrow keys nudge the focused decal (keyboard alternative to dragging). */
+function onDecalKey(e: KeyboardEvent, kind: DecalKind, index: number) {
+  const at = target(kind, index)
+  const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key]
+  if (!at || !step) return
+  e.preventDefault()
+  const b = decalBox(kind, 'size' in at ? (at as { size: PatchSize }).size : undefined)
+  const sgn = view.value === 'back' ? -1 : 1
+  at.u = r3(Math.min(1 - b.u / 2, Math.max(b.u / 2, at.u + step[0]! * 0.02 * sgn)))
+  at.v = r3(Math.min(1 - b.v / 2, Math.max(b.v / 2, at.v + step[1]! * 0.02)))
+}
+
+function stepView(d: number) {
+  const i = VIEWS.findIndex((v) => v.id === view.value)
+  view.value = VIEWS[(i + d + VIEWS.length) % VIEWS.length]!.id
+}
+
+// Warm the browser cache with the other views of this look.
+function preload() {
+  const d = dir.value
+  const w = bodyWash.value
+  const list = bag.value.kind === 'parts'
+    ? ['front', 'back'].flatMap((v) => [`${d}/${v}-body-${w}.webp`, `${d}/${v}-accent-${state.wash[1] ?? w}.webp`, `${d}/${v}-hw-${state.hw}.webp`])
+    : ['front', 'back'].map((v) => `${d}/${v}-all-${w}.webp`)
+  list.push(`${d}/top-${w}-${state.lining}.webp`)
+  for (const src of list) new Image().src = src
+}
+watch(() => [state.model, state.wash.join(), state.lining, state.hw], preload)
 
 onMounted(() => {
   if (backdrop.value) paintBackdrop(backdrop.value)
+  preload()
   const ready = document.fonts?.ready ?? Promise.resolve()
   void ready.then(() => {
+    fontsReady.value = true
     paintSwatches()
-    scene?.apply(snapshot())
   })
-  if (!host.value) return
-  try {
-    scene = createStellaScene({
-      host: host.value,
-      onLoading: () => (status.value = 'loading'),
-      onReady: (ok) => (status.value = ok ? 'ready' : 'error'),
-      onViewChange: (i) => (view.value = i),
-      onInteract: () => {
-        showHint.value = false
-        spinning.value = false
-      },
-      onSelect: (kind, index) => {
-        selected.value = { kind, index }
-        goTab(kind === 'mono' ? 'finish' : 'patch')
-      },
-      onPlace: (kind, index, at) => {
-        if (kind === 'mono') state.mono = at
-        else if (state.patches[index]) Object.assign(state.patches[index], at)
-      },
-    })
-    scene.apply(snapshot())
-  } catch (err) {
-    console.error('[configurator] WebGL unavailable', err)
-    status.value = 'error'
-  }
 })
-onBeforeUnmount(() => scene?.dispose())
-
-function rotate(radians: number) {
-  scene?.rotateBy(radians)
-}
-function showView(index: number) {
-  scene?.setView(index)
-}
 
 // ── Add to bag ────────────────────────────────────────────────────────────
 const added = ref(false)
 
-/** Small JPEG of the current render, light enough for localStorage/Firestore. */
-function thumbnail(): string | null {
-  const canvasEl = status.value === 'ready' ? host.value?.querySelector('canvas') : null
-  if (!canvasEl) return null
+const loadImg = (src: string) =>
+  new Promise<HTMLImageElement | null>((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
+
+/** Small JPEG of the front, light enough for localStorage/Firestore. */
+async function thumbnail(snap: StellaState): Promise<string | null> {
+  const b = findBag(snap.model)
+  const d = `/bags2d/${b.id}`
+  const w = snap.wash[0] ?? 'indigo'
+  const f = FRAMES[b.id]?.front ?? FALLBACK_FRAME
+  const parts = b.kind === 'parts'
+  const [body, ...over] = await Promise.all(
+    (parts ? [`${d}/front-body-${w}.webp`, `${d}/front-accent-${snap.wash[1] ?? w}.webp`, `${d}/front-hw-${snap.hw}.webp`] : [`${d}/front-all-${w}.webp`]).map(loadImg),
+  )
+  if (!body) return null
   const S = 192
+  // Decals on their own canvas, clipped to the body's silhouette.
+  const dc = document.createElement('canvas')
+  dc.width = dc.height = S
+  const dg = dc.getContext('2d')!
+  const place = async (src: string, at: Placement, bw: number, bh: number) => {
+    const img = await loadImg(src)
+    if (!img) return
+    const x = (f.x0 + at.u * (f.x1 - f.x0)) * S
+    const y = (f.y0 + at.v * (f.y1 - f.y0)) * S
+    dg.drawImage(img, x - (bw * S) / 2, y - (bh * S) / 2, bw * S, bh * S)
+  }
+  const bw = Math.abs(f.x1 - f.x0)
+  const bh = Math.abs(f.y0 - f.y1)
+  for (const pt of snap.patches) {
+    if (pt.side !== 'front') continue
+    const s = PATCH_SCALE[pt.size]
+    await place(patchArtURL(pt.style), pt, bw * b.patch.w * s, bh * b.patch.h * s)
+  }
+  if (snap.mono.side === 'front') await place(monoCanvas(snap.finish, snap.initials).toDataURL(), snap.mono, bw * b.mono.w, bw * b.mono.w * 0.5)
+  dg.globalCompositeOperation = 'destination-in'
+  dg.drawImage(body, 0, 0, S, S)
+
   const c = document.createElement('canvas')
-  c.width = S
-  c.height = S
+  c.width = c.height = S
   const g = c.getContext('2d')!
   g.fillStyle = '#8b8277'
   g.fillRect(0, 0, S, S)
-  const side = Math.min(canvasEl.width, canvasEl.height) * 0.86
-  g.drawImage(canvasEl, (canvasEl.width - side) / 2, (canvasEl.height - side) / 2, side, side, 0, 0, S, S)
+  g.drawImage(body, 0, 0, S, S)
+  g.drawImage(dc, 0, 0)
+  for (const img of over) if (img) g.drawImage(img, 0, 0, S, S)
   return c.toDataURL('image/jpeg', 0.8)
 }
 
-function addToBag() {
+async function addToBag() {
   const snap = snapshot()
   const b = findBag(snap.model)
   addLine({
@@ -232,13 +441,19 @@ function addToBag() {
     slug: b.id,
     title: b.title,
     price: stellaPrice(snap),
-    image: thumbnail(),
+    image: await thumbnail(snap).catch(() => null),
     imageAlt: `Borsa ${b.name} personalizzata`,
     quantity: 1,
     details: describeStella(snap),
     link: `/customize?model=${b.id}&cfg=${encodeStella(snap)}`,
   })
   added.value = true
+}
+
+// The 3D viewer reports decals moved on the model too.
+function onPlace3d(kind: DecalKind, index: number, at: Placement) {
+  const t = target(kind, index)
+  if (t) Object.assign(t, at)
 }
 
 const INSTAGRAM = 'https://www.instagram.com/linea2.upcycling/'
@@ -248,14 +463,49 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 <template>
   <div class="stella">
     <div class="stage">
-      <section class="viewport" :aria-label="`Anteprima 3D della borsa ${bag.name}`">
+      <section class="viewport" :aria-label="`Anteprima della borsa ${bag.name}`">
         <canvas ref="backdrop" class="backdrop" aria-hidden="true" />
-        <div ref="host" class="gl" />
+        <div class="bag-wrap" :class="{ zoomed }">
+          <div ref="stageEl" class="bag2d">
+            <img
+              v-for="(src, i) in layers"
+              :key="src"
+              class="layer"
+              :src="src"
+              :alt="i === 0 ? `${bag.name}, vista ${VIEWS.find((v) => v.id === view)!.name.toLowerCase()}` : ''"
+              draggable="false"
+              @load="onImg(true)"
+              @error="onImg(false)"
+            />
+            <div v-if="decals.length" class="decals" :style="{ maskImage: `url(${layers[0]})`, WebkitMaskImage: `url(${layers[0]})` }">
+              <img
+                v-for="d in decals"
+                :key="d.key"
+                class="decal"
+                :class="{ sel: selected?.kind === d.kind && selected.index === d.index, mono: d.kind === 'mono' }"
+                :src="d.src"
+                :style="d.style"
+                :alt="d.label"
+                :aria-label="`${d.label}: trascina o usa le frecce per spostarlo`"
+                role="button"
+                tabindex="0"
+                draggable="false"
+                @pointerdown="onDecalDown($event, d.kind, d.index)"
+                @pointermove="onDecalMove"
+                @pointerup="onDecalUp"
+                @pointercancel="onDecalUp"
+                @keydown="onDecalKey($event, d.kind, d.index)"
+                @focus="selected = { kind: d.kind, index: d.index }"
+              />
+            </div>
+            <img v-for="src in overLayers" :key="src" class="layer" :src="src" alt="" draggable="false" />
+          </div>
+        </div>
 
         <div class="vp-ui">
-          <button v-if="status === 'ready'" class="ar-pill inside-pill" type="button" :aria-pressed="inside" @click="inside = !inside">
-            <svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13L4 9Zm4 0a4 4 0 0 1 8 0" /></svg>
-            <span>{{ inside ? 'VIEW OUTSIDE' : 'VIEW INSIDE' }}</span>
+          <button class="ar-pill v3d-pill" type="button" @click="show3d = true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 4.5 7.3v9.4L12 21l7.5-4.3V7.3L12 3Zm0 0v9m0 0 7.5-4.7M12 12 4.5 7.3M12 12v9" /></svg>
+            <span>VIEW IN 3D</span>
           </button>
           <div class="vp-top">
             <a class="icon-btn" :href="INSTAGRAM" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
@@ -265,7 +515,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
               <svg viewBox="0 0 24 24"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7l-.8-.1a5.7 5.7 0 1 0 5.7 5.7V9a7.4 7.4 0 0 0 4.3 1.4V7.3a4.3 4.3 0 0 1-3.2-1.5Z" /></svg>
             </a>
             <button class="ar-pill" type="button" :aria-expanded="showAr" @click="showAr = !showAr">
-              <svg viewBox="0 0 24 24"><path d="M12 3 4.5 7.3v9.4L12 21l7.5-4.3V7.3L12 3Zm0 0v9m0 0 7.5-4.7M12 12 4.5 7.3M12 12v9" /></svg>
+              <svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3m0 8v3a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2v-3" /></svg>
               <span>VIEW IN AR</span>
             </button>
           </div>
@@ -273,9 +523,9 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
             La vista in realtà aumentata arriva presto: dal telefono potrai appoggiare la borsa sul tavolo di casa.
           </div>
 
-          <p v-if="status === 'loading'" class="vp-status">Loading 3D model…</p>
-          <p v-else-if="status === 'error'" class="vp-status">
-            Il modello 3D non si è caricato su questo dispositivo. Puoi comunque scegliere le opzioni e ordinare.
+          <p v-if="imgState === 'loading'" class="vp-status">Loading…</p>
+          <p v-else-if="imgState === 'error'" class="vp-status">
+            L'immagine di questa combinazione non è ancora disponibile. Puoi comunque scegliere le opzioni e ordinare.
           </p>
 
           <div class="summary panel-glass" aria-live="polite">
@@ -289,17 +539,18 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
           </div>
 
           <div class="vp-ctrl">
-            <button type="button" aria-label="Ruota a sinistra" @click="rotate(-Math.PI / 4)">
+            <button type="button" aria-label="Vista precedente" @click="stepView(-1)">
               <svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5M5 8h9" /></svg>
             </button>
             <button type="button" :aria-label="zoomed ? 'Allontana' : 'Avvicina'" :aria-pressed="zoomed" @click="zoomed = !zoomed">
               <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3.5 3.5M5 7h4M7 5v4" /></svg>
             </button>
-            <button type="button" aria-label="Ruota a destra" @click="rotate(Math.PI / 4)">
+            <button type="button" aria-label="Vista successiva" @click="stepView(1)">
               <svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5M11 8H2" /></svg>
             </button>
           </div>
-          <span v-if="showHint && status === 'ready'" class="hint">Trascina per ruotare · trascina toppe e monogramma per spostarli</span>
+          <span v-if="showHint && view !== 'top'" class="hint">Trascina toppe e monogramma per spostarli</span>
+          <span v-else-if="view === 'top'" class="hint">La borsa aperta, vista dall'alto: qui scegli la fodera</span>
         </div>
       </section>
 
@@ -344,7 +595,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 :key="pi"
                 class="prow"
                 :class="{ sel: selected?.kind === 'patch' && selected.index === pi }"
-                @click="selected = { kind: 'patch', index: pi }"
+                @click="select('patch', pi)"
               >
                 <span class="pnum">{{ pi + 1 }}</span>
                 <div class="pstyles" role="group" :aria-label="`Stile toppa ${pi + 1}`">
@@ -364,6 +615,19 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 <div class="psize" role="group" :aria-label="`Misura toppa ${pi + 1}`">
                   <button v-for="z in SIZES" :key="z" type="button" :aria-pressed="pt.size === z" @click="pt.size = z">{{ z }}</button>
                 </div>
+                <div class="psize pside" role="group" :aria-label="`Lato toppa ${pi + 1}`">
+                  <button
+                    v-for="s in SIDES"
+                    :key="s.id"
+                    type="button"
+                    :title="s.name"
+                    :aria-label="s.name"
+                    :aria-pressed="pt.side === s.id"
+                    @click.stop="setSide(pt, s.id)"
+                  >
+                    {{ s.label }}
+                  </button>
+                </div>
                 <span class="pprice">+€{{ findOption(PATCH, pt.style).p }}</span>
                 <button type="button" class="prm" :aria-label="`Rimuovi toppa ${pi + 1}`" @click.stop="removePatch(pi)">×</button>
               </div>
@@ -371,7 +635,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 + ADD A PATCH
               </button>
               <p class="note">
-                Drag each patch on the bag to place it, front or back (up to {{ STELLA_MAX_PATCHES }}). Each patch is priced on its own.
+                Drag each patch on the bag to place it; F/R puts it on the front or the back (up to {{ STELLA_MAX_PATCHES }}). Each patch is priced on its own.
               </p>
             </div>
             <div v-else class="sws">
@@ -394,8 +658,24 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
             <p v-if="g.key === 'wash'" class="note">
               {{ maxWashes(bag) > 1 ? 'Up to two washes: the second one goes on strap and tab.' : 'One wash for the whole bag.' }}
             </p>
+            <p v-if="g.key === 'lining'" class="note">The bag opens on the view from the top, so you can see the lining inside.</p>
             <template v-if="g.key === 'finish'">
               <p class="note">Every bag carries its monogram: drag it on the bag to choose where it goes.</p>
+              <div class="mono-side">
+                <span>Monogram on the</span>
+                <div class="psize pside" role="group" aria-label="Lato del monogramma">
+                  <button
+                    v-for="s in SIDES"
+                    :key="s.id"
+                    type="button"
+                    :title="s.name"
+                    :aria-pressed="state.mono.side === s.id"
+                    @click="setSide(state.mono, s.id)"
+                  >
+                    {{ s.name.toUpperCase() }}
+                  </button>
+                </div>
+              </div>
               <label class="ini" for="stella-initials">
                 Custom initials
                 <input
@@ -417,9 +697,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         <div class="buy">
           <div class="price-row">
             <span class="price" aria-live="polite">{{ fmt(price) }}</span>
-            <button type="button" class="link" @click="spinning = !spinning">
-              {{ spinning ? 'STOP ROTATION' : 'VIEW ALL VIEWS' }}
-            </button>
+            <button type="button" class="link" @click="show3d = true">VIEW IN 3D</button>
           </div>
           <button type="button" class="add" @click="addToBag">ADD TO BAG</button>
           <p v-if="added" class="added" role="status">
@@ -429,16 +707,13 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
       </aside>
     </div>
 
-    <div class="dots" role="group" aria-label="Vista">
-      <button
-        v-for="(label, i) in ['Fronte', 'Lato', 'Retro']"
-        :key="label"
-        type="button"
-        :aria-pressed="view === i"
-        :aria-label="label"
-        @click="showView(i)"
-      />
+    <div class="views" role="group" aria-label="Vista">
+      <button v-for="v in VIEWS" :key="v.id" type="button" :aria-pressed="view === v.id" @click="view = v.id">
+        {{ v.name }}
+      </button>
     </div>
+
+    <LazyBag3DViewer v-if="show3d" :state="state" @close="show3d = false" @place="onPlace3d" />
   </div>
 </template>
 
@@ -462,24 +737,67 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   overflow: hidden;
   background: #8b8277;
 }
-.backdrop,
-.gl {
+.backdrop {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-.backdrop {
   z-index: 0;
   object-fit: cover;
 }
-.gl {
+.bag-wrap {
+  position: absolute;
+  inset: 0;
   z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 44px 190px 44px 20px;
 }
-.gl :deep(canvas) {
-  display: block;
+.bag2d {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.35));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bag2d {
+    transition: transform 250ms ease-out;
+  }
+}
+.bag-wrap.zoomed .bag2d {
+  transform: scale(1.35);
+}
+.layer {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  user-select: none;
+  pointer-events: none;
+}
+.decals {
+  position: absolute;
+  inset: 0;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+.decal {
+  position: absolute;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5));
+  outline: none;
+}
+.decal:active {
+  cursor: grabbing;
+}
+.decal.sel,
+.decal:focus-visible {
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)) drop-shadow(0 0 2px var(--color-brass-hi)) drop-shadow(0 0 2px var(--color-brass-hi));
 }
 .vp-ui {
   position: absolute;
@@ -524,14 +842,33 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   height: 17px;
   fill: #fff;
 }
-.inside-pill {
+.v3d-pill {
   position: absolute;
   top: 18px;
   left: 20px;
 }
-.inside-pill[aria-pressed='true'] {
-  background: var(--color-selvedge);
-  box-shadow: 0 0 0 1px var(--color-brass);
+.mono-side {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.prow > .psize {
+  grid-row: 2;
+  grid-column: 2;
+  justify-self: start;
+}
+.prow > .pside {
+  grid-row: 2;
+  grid-column: 3 / 5;
+  justify-self: end;
+}
+.psize.pside button {
+  width: auto;
+  min-width: 22px;
+  padding: 0 6px;
 }
 .vp-top {
   position: absolute;
@@ -779,7 +1116,8 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 }
 .prow {
   display: grid;
-  grid-template-columns: 16px 1fr auto auto 20px;
+  grid-template-columns: 16px 1fr auto 20px;
+  row-gap: 6px;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
@@ -937,25 +1275,29 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   text-align: center;
   margin-top: -6px;
 }
-.dots {
+.views {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   padding-top: 16px;
   width: calc(100% - 368px);
 }
-.dots button {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 0;
-  padding: 0;
-  background: #6b6862;
+.views button {
+  height: 30px;
+  padding: 0 16px;
+  border-radius: 15px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--color-muted);
+  font: 500 11px/1 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
 }
-.dots button[aria-pressed='true'] {
-  background: #a9a49b;
-  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3px #a9a49b;
+.views button[aria-pressed='true'] {
+  color: var(--color-fg);
+  border-color: var(--color-brass-hi);
+  background: rgb(0 0 0 / 0.18);
 }
 
 /* Light theme: inspector text sits on white glass */
@@ -980,7 +1322,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   .stage {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
-  .dots {
+  .views {
     width: calc(100% - 338px);
   }
 }
@@ -997,8 +1339,11 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   .scroll {
     overflow: visible;
   }
-  .dots {
+  .views {
     width: 100%;
+  }
+  .bag-wrap {
+    padding: 50px 16px 44px;
   }
 }
 @media (max-width: 520px) {
@@ -1007,6 +1352,14 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   }
   .summary {
     display: none;
+  }
+  .bag-wrap {
+    padding: 56px 8px 40px;
+  }
+  .hint {
+    bottom: 50px;
+    max-width: calc(100% - 24px);
+    text-align: center;
   }
   .ar-pill span {
     display: none;

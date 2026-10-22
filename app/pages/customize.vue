@@ -2,7 +2,7 @@
 useSeoHead({
   title: 'Customize · Stella Bag',
   description:
-    'Personalizza la tua borsa in 3D: modello, lavaggio del denim, fodera, toppe patchwork, accessori in metallo e iniziali ricamate.',
+    'Personalizza la tua borsa: modello, lavaggio del denim, fodera, toppe patchwork, accessori in metallo e iniziali ricamate.',
 })
 </script>
 

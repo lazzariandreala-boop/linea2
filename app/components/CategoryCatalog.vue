@@ -86,7 +86,7 @@ useSeoHead({
           Customize
         </NuxtLink>
       </div>
-      <p class="mt-2 max-w-xl text-sm text-fg/70">Scegli il modello e personalizzalo in 3D: lo cuciamo su ordinazione.</p>
+      <p class="mt-2 max-w-xl text-sm text-fg/70">Scegli il modello e personalizzalo: lo cuciamo su ordinazione.</p>
       <div class="mt-5">
         <BagModelGrid />
       </div>

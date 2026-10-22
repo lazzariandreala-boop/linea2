@@ -2,8 +2,8 @@
  * three.js scene for the bag configurator. Loads the chosen model from
  * public/models/, dresses it with woven denim/lining textures, and lays the
  * patches and the monogram as decals that hug the curved panels. Decals can
- * be dragged on the bag (front or back); a cutaway view opens the front so
- * the lining shows.
+ * be dragged on the bag (front or back). `still()` renders fixed views for
+ * the 2D configurator images (scripts/render-bags-2d.mjs).
  * - `parts` models (Stella, from CLO) keep their fabric groups: body, strap,
  *   tab, rings and stitches each get their own material.
  * - `mesh` models (Meshy) are a single untextured shell: they get computed
@@ -26,6 +26,7 @@ import {
   findOption,
   maxWashes,
   type BagModel,
+  type Frame,
   type Placement,
   type StellaState,
 } from './options'
@@ -100,14 +101,20 @@ export interface StellaSceneOptions {
   onPlace?: (kind: DecalKind, index: number, at: Placement) => void
 }
 
+export type StillView = 'front' | 'back' | 'top'
+/** body: the bag without strap/tab/rings; accent: strap + tab; hw: rings.
+ *  Layers are rendered with the others as invisible occluders, so they stack. */
+export type StillLayer = 'all' | 'body' | 'accent' | 'hw'
 export interface StellaScene {
   apply: (state: StellaState) => void
   rotateBy: (radians: number) => void
   setView: (index: number) => void
   setZoom: (on: boolean) => void
   setSpin: (on: boolean) => void
-  /** Cutaway: hide the front half so the lining shows. */
-  setInside: (on: boolean) => void
+  /** Resolves once the current model has loaded (false on failure). */
+  loaded: () => Promise<boolean>
+  /** Render one fixed view/layer for the 2D images (see StillView). */
+  still: (view: StillView, layer: StillLayer, size: number) => { url: string; frame: Frame }
   dispose: () => void
 }
 
@@ -410,7 +417,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   // preserveDrawingBuffer: the cart thumbnail is copied from this canvas.
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-  renderer.localClippingEnabled = true
   host.appendChild(renderer.domElement)
 
   const scene = new THREE.Scene()
@@ -448,12 +454,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   scene.add(root)
   const maxAniso = renderer.capabilities.getMaxAnisotropy()
 
-  // Cutaway plane (holder space: keep z <= constant). Parked far away when
-  // the interior view is off, so materials never need recompiling.
-  const clipLocal = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e6)
-  const clip = new THREE.Plane()
-  const clipping = [clip]
-  let inside = false
 
   function tex(c: HTMLCanvasElement, rep: number | [number, number] = 1, color = true) {
     const t = new THREE.CanvasTexture(c)
@@ -477,7 +477,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       roughness: 0.85,
       polygonOffset: true,
       polygonOffsetFactor: -2 - order,
-      clippingPlanes: clipping,
     })
 
   function decalSize(m: Model, kind: DecalKind, size: keyof typeof PATCH_SCALE = 'L') {
@@ -513,7 +512,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     const main = findOption(WASH, state.wash[0] ?? 'indigo')
     const acc = state.wash[1] && maxWashes(m.bag) > 1 ? findOption(WASH, state.wash[1]) : main
     const rep = m.repeat
-    const fabric = (w: DenimSpec, side: THREE.Side, clipped = true) => {
+    const fabric = (w: DenimSpec, side: THREE.Side) => {
       const { map, bump } = denim(w)
       return new THREE.MeshStandardMaterial({
         map: tex(map, rep),
@@ -521,7 +520,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
         bumpScale: 0.6,
         roughness: 0.92,
         side,
-        clippingPlanes: clipped ? clipping : [],
       })
     }
     const set = (list: THREE.Mesh[], mat: THREE.Material | THREE.Material[]) => {
@@ -538,8 +536,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
           map: tex(lining(findOption(LINING, state.lining).id, 256), rep * 0.9),
           roughness: state.lining === 'floral' ? 0.5 : 0.92,
           side,
-          clippingPlanes: clipping,
-        })
+            })
       if (m.bag.kind === 'parts') {
         // Cloth pieces were sorted into [outer, inner] groups at load; each
         // shows only from the side it faces, so seams don't leak lining.
@@ -549,13 +546,13 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
         set(P.body, fabric(denimSpec(main), THREE.FrontSide))
         set(m.inner, liningMat(THREE.BackSide))
       }
-      set(P.strap, fabric(denimSpec(acc), THREE.DoubleSide, false))
-      set(P.strapSide, fabric(denimSpec(acc, 0.18), THREE.DoubleSide, false))
+      set(P.strap, fabric(denimSpec(acc), THREE.DoubleSide))
+      set(P.strapSide, fabric(denimSpec(acc, 0.18), THREE.DoubleSide))
       set(P.tab, fabric(denimSpec(acc), THREE.DoubleSide))
       set(P.tabSide, fabric(denimSpec(acc, 0.18), THREE.DoubleSide))
       const hw = findOption(HW, state.hw)
       set(P.ring, new THREE.MeshStandardMaterial({ color: hw.hex, metalness: 1, roughness: state.hw === 'black' ? 0.45 : 0.22, side: THREE.DoubleSide }))
-      set(P.stitch, new THREE.MeshStandardMaterial({ color: STELLA_THREAD, roughness: 0.75, side: THREE.DoubleSide, clippingPlanes: clipping }))
+      set(P.stitch, new THREE.MeshStandardMaterial({ color: STELLA_THREAD, roughness: 0.75, side: THREE.DoubleSide }))
       if (m.cover) {
         // Same weave as the body, faded in at the edges by the alpha map.
         const { map, bump } = denim(denimSpec(main))
@@ -573,8 +570,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
           transparent: true,
           polygonOffset: true,
           polygonOffsetFactor: -1,
-          clippingPlanes: clipping,
-        })
+            })
       }
     }
 
@@ -673,7 +669,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       m.parent!.add(s)
       return s
     })
-    clipLocal.constant = inside ? (box.min.z + box.max.z) / 2 : 1e6
     if (bag.cover) dropStitchesUnder(parts.stitch, box, bag.cover)
     const m: Model = {
       bag, holder, parts, inner, box, maps, cover: null, patches: [],
@@ -719,13 +714,14 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   // Load on demand; a newer request supersedes one still in flight.
   const loader = new GLTFLoader()
   let wanted = ''
+  let loading: Promise<boolean> = Promise.resolve(false)
   function load(bag: BagModel) {
     wanted = bag.id
     opts.onLoading?.()
-    loader
+    loading = loader
       .loadAsync(bag.url)
       .then((gltf) => {
-        if (disposed || wanted !== bag.id) return
+        if (disposed || wanted !== bag.id) return false
         if (model) {
           root.remove(model.holder)
           disposeObject(model.holder)
@@ -738,10 +734,12 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
         root.position.y = savedY
         if (pending) applyModel(pending)
         opts.onReady?.(true)
+        return true
       })
       .catch((err: unknown) => {
         console.error(`[configurator] ${bag.url} failed to load`, err)
         if (!disposed && wanted === bag.id) opts.onReady?.(false)
+        return false
       })
   }
 
@@ -753,7 +751,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     if (!w || !h) { w = 900; h = 610 }
     renderer.setSize(w, h, false)
     camera.aspect = w / h
-    camZT = (w / h < 0.95 ? 9.4 : 7.2) * (zoomed ? 0.68 : inside ? 0.84 : 1)
+    camZT = (w / h < 0.95 ? 9.4 : 7.2) * (zoomed ? 0.68 : 1)
     camera.updateProjectionMatrix()
   }
   resize()
@@ -777,8 +775,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     const r = el.getBoundingClientRect()
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1)
     ray.setFromCamera(ndc, camera)
-    // Skip what the cutaway hides.
-    return ray.intersectObjects(objs, false).find((h) => !inside || clip.distanceToPoint(h.point) >= 0) ?? null
+    return ray.intersectObjects(objs, false)[0] ?? null
   }
   const decalMeshes = () => (model ? [model.mono, ...model.patches].map((d) => d.mesh) : [])
   function decalAt(clientX: number, clientY: number): Decal | null {
@@ -865,7 +862,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       return
     }
     tY = drag.ty + (e.clientX - drag.x) * 0.011
-    tX = Math.max(-0.35, Math.min(0.6, drag.tx + (e.clientY - drag.y) * 0.005))
+    tX = Math.max(-0.35, Math.min(1.1, drag.tx + (e.clientY - drag.y) * 0.005))
   }
   const onUp = () => {
     if (grab) highlight(grab.d, false)
@@ -889,7 +886,9 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
   // ── Render loop ─────────────────────────────────────────────────────────
   const t0 = performance.now()
   let raf = 0
+  let stopped = false
   const loop = (now: number) => {
+    if (stopped) return
     if (spin) tY += 0.007
     rotY += (tY - rotY) * 0.09
     rotX += (tX - rotX) * 0.09
@@ -901,16 +900,213 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     const still = reduce || grab
     root.rotation.set(rotX, rotY, still ? 0 : Math.sin(tt / 2000) * 0.01)
     root.position.y = still ? 0 : Math.sin(tt / 1400) * 0.02
-    if (model) {
-      root.updateMatrixWorld(true)
-      clip.copy(clipLocal).applyMatrix4(model.holder.matrixWorld)
-    }
     renderer.render(scene, camera)
     raf = requestAnimationFrame(loop)
   }
   raf = requestAnimationFrame(loop)
 
+  // ── Stills for the 2D configurator ──────────────────────────────────────
+  const rimLocal = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)
+  const rimPlane = new THREE.Plane()
+  /**
+   * Meshy shells have thick walls, so the inner wall belongs to the outer
+   * mesh: dress the triangles that face the bag's centre in the lining.
+   * Top view only (concave bits of the outside would turn too). Returns the
+   * undo.
+   */
+  function liningInside(m: Model) {
+    const centre = m.box.getCenter(new THREE.Vector3())
+    const undo: (() => void)[] = []
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3(), d = new THREE.Vector3()
+    m.parts.body.forEach((x, k) => {
+      const g = x.geometry
+      const p = g.attributes.position as THREE.BufferAttribute
+      const oldIndex = g.index
+      const oldMat = x.material
+      const out: number[] = []
+      const inn: number[] = []
+      for (let t = 0; t < p.count; t += 3) {
+        a.fromBufferAttribute(p, t).applyMatrix4(x.matrixWorld)
+        b.fromBufferAttribute(p, t + 1).applyMatrix4(x.matrixWorld)
+        c.fromBufferAttribute(p, t + 2).applyMatrix4(x.matrixWorld)
+        n.subVectors(c, b).cross(d.subVectors(a, b))
+        d.copy(a).add(b).add(c).divideScalar(3).sub(centre)
+        ;(n.dot(d) >= 0 ? out : inn).push(t, t + 1, t + 2)
+      }
+      g.setIndex([...out, ...inn])
+      g.addGroup(0, out.length, 0)
+      g.addGroup(out.length, inn.length, 1)
+      const lin = (m.inner[k]!.material as THREE.MeshStandardMaterial).clone()
+      lin.side = THREE.FrontSide
+      lin.clippingPlanes = [rimPlane]
+      x.material = [oldMat as THREE.Material, lin]
+      undo.push(() => {
+        g.setIndex(oldIndex)
+        g.clearGroups()
+        x.material = oldMat
+        lin.dispose()
+      })
+    })
+    return () => undo.forEach((f) => f())
+  }
+
+  /** Clip the bag's body above the rim line (holder space). */
+  function trimAtRim(m: Model) {
+    rimLocal.constant = m.box.min.y + (m.box.max.y - m.box.min.y) * m.bag.rim
+    renderer.localClippingEnabled = true
+    const mats = new Set<THREE.Material>()
+    for (const x of [...m.parts.body, ...m.parts.bodySide, ...m.parts.stitch, ...m.inner, ...(m.cover ? [m.cover] : [])]) {
+      for (const mat of ([] as THREE.Material[]).concat(x.material)) mats.add(mat)
+    }
+    for (const mat of mats) {
+      mat.clippingPlanes = [rimPlane]
+      mat.needsUpdate = true
+    }
+    return () => {
+      for (const mat of mats) {
+        mat.clippingPlanes = null
+        mat.needsUpdate = true
+      }
+      renderer.localClippingEnabled = false
+    }
+  }
+
+  /**
+   * Part the front and back walls towards the mouth, as a bag held open, so
+   * the top view shows the lining. Sides stay put (the push grows with distance
+   * from the middle plane). Returns a function that undoes it.
+   */
+  function openMouth(m: Model) {
+    const W = m.box.max.x - m.box.min.x
+    const H = m.box.max.y - m.box.min.y
+    const cz = (m.box.min.z + m.box.max.z) / 2
+    const hd = Math.max(1e-6, (m.box.max.z - m.box.min.z) / 2)
+    const y0 = m.box.min.y + H * m.bag.rim * 0.5
+    const amount = W * 0.08
+    const meshes = [...m.parts.body, ...m.parts.bodySide, ...m.parts.stitch, ...(m.cover ? [m.cover] : [])]
+    // gltfpack shares one vertex buffer between parts: only move the vertices
+    // these meshes index, and nothing above the rim (strap stitching).
+    const targets = new Map<THREE.BufferAttribute, { mesh: THREE.Mesh; verts: Set<number> }>()
+    for (const x of meshes) {
+      const pa = x.geometry.attributes.position as THREE.BufferAttribute
+      const t = targets.get(pa) ?? { mesh: x, verts: new Set<number>() }
+      const idx = x.geometry.index
+      if (idx) for (let i = 0; i < idx.count; i++) t.verts.add(idx.getX(i))
+      else for (let i = 0; i < pa.count; i++) t.verts.add(i)
+      targets.set(pa, t)
+    }
+    const undo: [THREE.BufferAttribute, Float32Array][] = []
+    const v = new THREE.Vector3()
+    for (const [pa, { mesh, verts }] of targets) {
+      undo.push([pa, (pa.array as Float32Array).slice()])
+      const toLocal = mesh.matrixWorld.clone().invert()
+      for (const i of verts) {
+        v.fromBufferAttribute(pa, i).applyMatrix4(mesh.matrixWorld)
+        const top = m.box.min.y + H * m.bag.rim
+        if (v.y <= y0 || v.y > m.box.max.y + H * 0.02) continue
+        const t = Math.min(1, (v.y - y0) / (top - y0))
+        v.z += amount * t * t * Math.max(-1, Math.min(1, (v.z - cz) / hd))
+        v.applyMatrix4(toLocal)
+        pa.setXYZ(i, v.x, v.y, v.z)
+      }
+      pa.needsUpdate = true
+    }
+    const bounds = () => meshes.forEach((x) => { x.geometry.computeBoundingBox(); x.geometry.computeBoundingSphere() })
+    bounds()
+    return () => {
+      for (const [pa, arr] of undo) {
+        ;(pa.array as Float32Array).set(arr)
+        pa.needsUpdate = true
+      }
+      bounds()
+    }
+  }
+
+  const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 60)
+  function still(view: StillView, layer: StillLayer, size: number) {
+    const m = model
+    if (!m) throw new Error('model not loaded')
+    stopped = true
+    renderer.setPixelRatio(1)
+    renderer.setSize(size, size, false)
+    root.rotation.set(0, 0, 0)
+    root.updateMatrixWorld(true)
+    // Top view: none of the models is modelled open (Stella's mouth is
+    // pinched shut, the Meshy shells are closed), so the body is trimmed at
+    // the mouth line and the walls parted a little.
+    const restore = view === 'top' ? openMouth(m) : null
+    const rim = view === 'top' ? trimAtRim(m) : null
+    const walls = view === 'top' && m.bag.kind === 'mesh' ? liningInside(m) : null
+    // Tilt the bag towards the camera for the top view, to look in.
+    root.position.set(0, 0, 0)
+    root.rotation.set(view === 'top' ? 1.4 : 0, view === 'back' ? Math.PI : 0, 0)
+    root.updateMatrixWorld(true)
+    if (rim) rimPlane.copy(rimLocal).applyMatrix4(m.holder.matrixWorld)
+    const P = m.parts
+    const accent = [...P.strap, ...P.strapSide, ...P.tab, ...P.tabSide]
+    for (const d of [m.mono, ...m.patches]) d.mesh.visible = false
+    // The tab would hang in mid-air once the mouth is open.
+    for (const x of P.tab.concat(P.tabSide)) x.visible = view !== 'top'
+    // Frame on the body, square; Stella's long strap runs out of the top.
+    const bb = new THREE.Box3()
+    P.body.forEach((x) => bb.expandByObject(x))
+    const c = bb.getCenter(new THREE.Vector3())
+    const sz = bb.getSize(new THREE.Vector3())
+    const parts = m.bag.kind === 'parts'
+    const half = (Math.max(sz.x, sz.y) / 2) * (parts ? 1.4 : 1.12)
+    if (parts) c.y += half * 0.22
+    ortho.left = -half
+    ortho.right = half
+    ortho.top = half
+    ortho.bottom = -half
+    ortho.position.set(c.x, c.y, c.z + 20)
+    ortho.lookAt(c.x, c.y, c.z)
+    ortho.updateProjectionMatrix()
+    // Layer: what is drawn; the rest of the bag only writes depth.
+    const draws = (x: THREE.Mesh) => {
+      if (layer === 'all') return true
+      if (layer === 'hw') return P.ring.includes(x)
+      if (layer === 'accent') return accent.includes(x) || P.stitch.includes(x)
+      return !accent.includes(x) && !P.ring.includes(x)
+    }
+    // Materials are shared between meshes: save each once.
+    const saved = new Map<THREE.Material, boolean>()
+    m.holder.traverse((o) => {
+      const x = o as THREE.Mesh
+      if (!x.isMesh || !x.visible) return
+      for (const mat of ([] as THREE.Material[]).concat(x.material)) {
+        if (!saved.has(mat)) saved.set(mat, mat.colorWrite)
+        if (!draws(x)) mat.colorWrite = false
+      }
+    })
+    renderer.setClearColor(0x000000, 0)
+    renderer.render(scene, ortho)
+    const url = renderer.domElement.toDataURL('image/png')
+    for (const [mat, cw] of saved) mat.colorWrite = cw
+    restore?.()
+    rim?.()
+    walls?.()
+    // Where the body box lands (u, v → image fractions).
+    const z = view === 'back' ? m.box.min.z : m.box.max.z
+    const at = (x: number, y: number) => {
+      const p = new THREE.Vector3(x, y, z).applyMatrix4(m.holder.matrixWorld).project(ortho)
+      return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 }
+    }
+    const cy = (m.box.min.y + m.box.max.y) / 2
+    const cx = (m.box.min.x + m.box.max.x) / 2
+    const frame: Frame = {
+      x0: at(m.box.min.x, cy).x,
+      x1: at(m.box.max.x, cy).x,
+      y0: at(cx, m.box.min.y).y,
+      y1: at(cx, m.box.max.y).y,
+      w: m.box.max.x - m.box.min.x,
+    }
+    return { url, frame }
+  }
+
   return {
+    loaded: () => loading,
+    still,
     apply(state) {
       pending = state
       const bag = findBag(state.model)
@@ -926,7 +1122,7 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       spin = false
       const a = STELLA_VIEWS[index] ?? 0
       tY = Math.round((tY - a) / (Math.PI * 2)) * Math.PI * 2 + a
-      tX = inside ? 0.42 : 0.04
+      tX = 0.04
       opts.onViewChange?.(index)
     },
     setZoom(on) {
@@ -935,17 +1131,6 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
     },
     setSpin(on) {
       spin = on
-    },
-    setInside(on) {
-      inside = on
-      if (model) clipLocal.constant = on ? (model.box.min.z + model.box.max.z) / 2 : 1e6
-      else if (!on) clipLocal.constant = 1e6
-      spin = false
-      // Face the cut and look down into the bag.
-      tY = Math.round(tY / (Math.PI * 2)) * Math.PI * 2 + (on ? -0.35 : 0)
-      tX = on ? 0.42 : 0.04
-      resize()
-      opts.onViewChange?.(0)
     },
     dispose() {
       disposed = true

@@ -47,38 +47,41 @@ export interface BagModel {
   cover?: DecalSpot
   /** Monogram decal; its height is half its width (512×256 canvas). */
   mono: { y: number; w: number }
+  /** Height of the mouth (fraction of the body box): the 2D top view trims
+   *  the model there, since none of the models is modelled open. */
+  rim: number
 }
 
 export const BAGS: BagModel[] = [
   {
     id: 'stella', name: 'Stella', title: 'Stella Bucket Bag', type: 'Bucket crossbody', p: 360,
     url: '/models/stella.glb', thumb: '/models/thumbs/stella.jpg', kind: 'parts',
-    patch: { y: 0.31, w: 0.8, h: 0.56 }, cover: { y: 0.31, w: 0.8, h: 0.56 }, mono: { y: 0.655, w: 0.26 },
+    patch: { y: 0.31, w: 0.8, h: 0.56 }, cover: { y: 0.31, w: 0.8, h: 0.56 }, mono: { y: 0.655, w: 0.26 }, rim: 0.8,
   },
   {
     id: 'luna', name: 'Luna', title: 'Luna Hobo Bag', type: 'Crescent hobo', p: 290,
     url: '/models/luna.glb', thumb: '/models/thumbs/luna.jpg', kind: 'mesh',
-    patch: { y: 0.2, w: 0.5, h: 0.24 }, mono: { y: 0.37, w: 0.22 },
+    patch: { y: 0.2, w: 0.5, h: 0.24 }, mono: { y: 0.37, w: 0.22 }, rim: 0.4,
   },
   {
     id: 'sole', name: 'Sole', title: 'Sole Shoulder Bag', type: 'Shoulder tote', p: 320,
     url: '/models/sole.glb', thumb: '/models/thumbs/sole.jpg', kind: 'mesh',
-    patch: { y: 0.2, w: 0.52, h: 0.28 }, mono: { y: 0.44, w: 0.22 },
+    patch: { y: 0.2, w: 0.52, h: 0.28 }, mono: { y: 0.44, w: 0.22 }, rim: 0.56,
   },
   {
     id: 'atelier', name: 'Atelier', title: 'Atelier Tote', type: 'Large tote', p: 340,
     url: '/models/atelier.glb', thumb: '/models/thumbs/atelier.jpg', kind: 'mesh',
-    patch: { y: 0.22, w: 0.5, h: 0.3 }, mono: { y: 0.48, w: 0.22 },
+    patch: { y: 0.22, w: 0.5, h: 0.3 }, mono: { y: 0.48, w: 0.22 }, rim: 0.5,
   },
   {
     id: 'viaggio', name: 'Viaggio', title: 'Viaggio Barrel Bag', type: 'Barrel shoulder', p: 310,
     url: '/models/viaggio.glb', thumb: '/models/thumbs/viaggio.jpg', kind: 'mesh',
-    patch: { y: 0.16, w: 0.4, h: 0.18 }, mono: { y: 0.31, w: 0.2 },
+    patch: { y: 0.16, w: 0.4, h: 0.18 }, mono: { y: 0.31, w: 0.2 }, rim: 0.36,
   },
   {
     id: 'trama', name: 'Trama', title: 'Trama Braided Tote', type: 'Tote, braided handles', p: 330,
     url: '/models/trama.glb', thumb: '/models/thumbs/trama.jpg', kind: 'mesh',
-    patch: { y: 0.2, w: 0.52, h: 0.28 }, mono: { y: 0.44, w: 0.22 },
+    patch: { y: 0.2, w: 0.52, h: 0.28 }, mono: { y: 0.44, w: 0.22 }, rim: 0.56,
   },
 ]
 
@@ -105,6 +108,19 @@ export interface Placement {
 }
 
 export type PatchSize = 'S' | 'M' | 'L'
+
+/** Where the body's bounding box lands in a 2D image, as image fractions:
+ *  x of u=0 and u=1, y of v=0 and v=1 (back views run right to left), plus
+ *  the body's width in scene units (to scale the denim on patches). */
+export interface Frame {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+  w: number
+}
+
+export type BagView = 'front' | 'back' | 'top'
 
 export interface PatchItem extends Placement {
   style: string

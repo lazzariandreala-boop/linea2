@@ -8,6 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "render:bags2d": "node scripts/render-bags-2d.mjs",
     "gen:placeholders": "node scripts/gen-placeholders.mjs",
     "typecheck": "nuxi typecheck",
     "test": "vitest run",

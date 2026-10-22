@@ -12,7 +12,7 @@ import { BAGS } from '~/utils/stella/options'
       >
         <img
           :src="b.thumb"
-          :alt="`Borsa ${b.name} in denim, anteprima 3D`"
+          :alt="`Borsa ${b.name} in denim, anteprima`"
           width="360"
           height="360"
           loading="lazy"
