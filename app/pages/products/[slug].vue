@@ -33,7 +33,7 @@ useSeoHead({
       </NuxtLink>
     </nav>
 
-    <div class="grid gap-8 lg:grid-cols-2 lg:gap-14">
+    <div class="grid gap-8 lg:grid-cols-2 lg:gap-8">
       <ProductGallery :images="product.gallery" :title="product.title" />
 
       <div class="lg:pt-4">

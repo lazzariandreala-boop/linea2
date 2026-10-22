@@ -14,7 +14,7 @@ const profileUrl = computed(() => `https://www.tiktok.com/@${props.handle}`)
 <template>
   <div
     v-if="!loaded"
-    class="card-depth relative flex min-h-[340px] w-full flex-col items-center justify-center gap-5 overflow-hidden rounded-card bg-linear-to-br from-wash via-selvedge to-raw p-8 text-center shadow-card"
+    class="card-depth relative flex min-h-[240px] w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-linear-to-br from-wash via-selvedge to-raw p-6 text-center shadow-card"
   >
     <span class="flex h-16 w-16 items-center justify-center rounded-full border border-brass/50 bg-black/30 text-white">
       <SocialIcon name="tiktok" class="h-7 w-7" />
@@ -30,7 +30,7 @@ const profileUrl = computed(() => `https://www.tiktok.com/@${props.handle}`)
   </div>
 
   <!-- No card-depth here: its overlay would cover the TikTok iframe. -->
-  <div v-else class="w-full rounded-card bg-linear-to-br from-wash via-selvedge to-raw p-2 shadow-card sm:p-4">
+  <div v-else class="w-full rounded-panel bg-linear-to-br from-brass/60 via-wash to-selvedge p-1.5 shadow-card sm:p-2">
     <ClientOnly>
       <TikTokEmbed :video-url="profileUrl" :title="`@${handle}`" :creator="handle" />
     </ClientOnly>

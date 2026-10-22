@@ -5,7 +5,7 @@ const STORAGE_KEY = 'linea2-theme'
 
 /** Keeps the browser UI (address bar / status bar) in sync with the canvas. */
 const THEME_COLOR: Record<Theme, string> = {
-  dark: '#262523',
+  dark: '#121a2c',
   light: '#f9f9fb',
 }
 

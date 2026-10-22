@@ -19,17 +19,41 @@ const props = defineProps<{
 const host = ref<HTMLElement | null>(null)
 const { start } = useGlobalLoading()
 
+/**
+ * TikTok lays the profile card out at most ~780px wide, centred in a white
+ * iframe. On wider containers we zoom the iframe so the card fills the whole
+ * width instead of floating in the middle (bigger covers, no white gutters).
+ */
+const CREATOR_CARD = 780
+const MAX_ZOOM = 1.45
+let resize: ResizeObserver | null = null
+function fit() {
+  const el = host.value
+  const iframe = el?.querySelector('iframe')
+  if (!el || !iframe || !props.creator) return
+  const w = el.clientWidth
+  const zoom = Math.min(MAX_ZOOM, Math.max(1, w / CREATOR_CARD))
+  iframe.style.zoom = String(zoom)
+  iframe.style.width = `${w / zoom}px`
+  iframe.style.minWidth = '0'
+  iframe.style.maxWidth = 'none'
+}
+
 onMounted(async () => {
   if (!host.value) return
   const stop = start()
   renderTikTokEmbeds(host.value)
   await waitForEmbedIframe(host.value)
   stop()
+  fit()
+  resize = new ResizeObserver(fit)
+  resize.observe(host.value)
 })
+onBeforeUnmount(() => resize?.disconnect())
 </script>
 
 <template>
-  <div ref="host" class="w-full">
+  <div ref="host" class="w-full overflow-hidden rounded-card" :class="{ 'bg-white': props.creator }">
     <blockquote
       v-if="props.creator"
       class="tiktok-embed"

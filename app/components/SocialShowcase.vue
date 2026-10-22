@@ -8,7 +8,7 @@ const videos = computed(() => feed.value.tiktok.slice(0, 4))
 </script>
 
 <template>
-  <section class="site-container py-16 sm:py-20">
+  <section class="site-container py-10 sm:py-12">
     <UiReveal>
       <div class="flex flex-wrap items-end justify-between gap-4">
         <UiSectionHeading

@@ -12,8 +12,8 @@ const LINKS = [
 </script>
 
 <template>
-  <footer class="relative mt-24 border-t border-fg/10">
-    <div class="site-container grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+  <footer class="relative mt-12 border-t border-fg/10">
+    <div class="site-container grid gap-10 py-10 sm:grid-cols-2 lg:grid-cols-4">
       <div class="sm:col-span-2 lg:col-span-1">
         <NuxtLink to="/" class="text-2xl text-fg">
           <AppLogo :height="34" tagline />

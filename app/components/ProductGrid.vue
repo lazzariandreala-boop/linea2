@@ -2,13 +2,15 @@
 import type { Product } from '~/types/content'
 
 // 1 col mobile → 2 tablet → 3–4 desktop, per the catalog spec.
-withDefaults(defineProps<{ products: Product[]; eagerCount?: number }>(), {
+const props = withDefaults(defineProps<{ products: Product[]; eagerCount?: number }>(), {
   eagerCount: 0,
 })
+// Three or fewer products fill the row instead of leaving an empty column.
+const few = computed(() => props.products.length <= 3)
 </script>
 
 <template>
-  <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" :class="{ 'xl:grid-cols-4': !few }">
     <UiReveal
       v-for="(product, i) in products"
       :key="product.documentId"

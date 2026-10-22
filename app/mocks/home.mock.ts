@@ -9,7 +9,7 @@ export const HOME_PAGE: HomePage = {
   heroEyebrow: 'Novità · La borsa Stella',
   heroHeadline: 'Denim ricostruito,\nsu misura',
   heroSubline:
-    'Ogni pezzo Linea 2 nasce da un paio di jeans che nessuno indossa più. Lo smontiamo a mano e lo ricuciamo in una borsa che esiste una volta sola. Scegli lavaggio, fodera e dettagli, e guardala prendere forma in 3D.',
+    'Ogni pezzo Linea 2 nasce da un paio di jeans che nessuno indossa più. Lo smontiamo a mano e lo ricuciamo in una borsa che esiste una volta sola. Scegli lavaggio, fodera e dettagli, e guardala prendere forma mentre la componi.',
   heroMedia: media('stella-hero_5e11a0.jpg', 1600, 1000, 'Borsa Stella in denim con toppa patchwork'),
   heroGradient: gradient('#f2643d', '#d24a26', '#4d3568', 145),
   featuredProducts: PRODUCTS.filter((p) => p.featured),

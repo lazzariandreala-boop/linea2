@@ -20,7 +20,7 @@ useSeoHead({
 </script>
 
 <template>
-  <div class="site-container py-12 sm:py-16">
+  <div class="site-container py-8 sm:py-10">
     <UiReveal>
       <UiSectionHeading
         eyebrow="Editorial"
@@ -47,7 +47,7 @@ useSeoHead({
       </li>
     </ul>
 
-    <section class="mt-14">
+    <section class="mt-10">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">TikTok</h2>
         <NuxtLink to="/tiktok" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
@@ -62,7 +62,7 @@ useSeoHead({
       </div>
     </section>
 
-    <section class="mt-16">
+    <section class="mt-10">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">Instagram</h2>
         <a
@@ -79,7 +79,7 @@ useSeoHead({
       </div>
     </section>
 
-    <section v-if="guides.length" class="mt-16">
+    <section v-if="guides.length" class="mt-10">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">{{ t((m) => m.nav.tutorials) }}</h2>
         <NuxtLink to="/tutorials" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">

@@ -905,7 +905,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .vp-ctrl button {
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
 }
@@ -1146,7 +1146,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .psize {
   display: flex;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
 }
 .psize button {

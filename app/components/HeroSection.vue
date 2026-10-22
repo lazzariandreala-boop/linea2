@@ -26,7 +26,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 <template>
   <section class="relative isolate overflow-hidden wash-hero">
 
-    <div class="site-container grid gap-12 py-20 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-32">
+    <div class="site-container grid gap-8 py-12 sm:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-16">
       <div class="max-w-xl">
         <span
           v-motion

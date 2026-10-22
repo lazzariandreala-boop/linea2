@@ -65,7 +65,7 @@ useSeoHead({
     </section>
 
     <!-- Configurator teaser -->
-    <section class="site-container pt-16 sm:pt-20">
+    <section class="site-container pt-10 sm:pt-12">
       <UiReveal>
         <div class="panel-glass grid gap-6 rounded-[22px] p-6 sm:p-10 md:grid-cols-[1fr_auto] md:items-center">
           <div>
@@ -73,7 +73,7 @@ useSeoHead({
             <h2 class="mt-3 text-display text-fg">Design your own bag</h2>
             <p class="mt-3 max-w-xl text-fg/70">
               Scegli il modello, il lavaggio del denim, la fodera, la toppa patchwork, gli accessori in metallo e le tue
-              iniziali. La vedi cambiare in 3D mentre la componi, e la cuciamo su ordinazione.
+              iniziali. La vedi cambiare mentre la componi, e la cuciamo su ordinazione.
             </p>
           </div>
           <UiBaseButton to="/customize" variant="solid" size="lg">Start customizing</UiBaseButton>
@@ -85,7 +85,7 @@ useSeoHead({
     </section>
 
     <!-- Featured products -->
-    <section v-if="featured.length" class="site-container py-16 sm:py-20">
+    <section v-if="featured.length" class="site-container py-10 sm:py-12">
       <UiReveal>
         <UiSectionHeading
           :eyebrow="t((m) => m.common.featured)"
@@ -101,7 +101,7 @@ useSeoHead({
     <SocialShowcase />
 
     <!-- Section teasers -->
-    <section class="site-container py-8 pb-20">
+    <section class="site-container pt-4 pb-12">
       <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiReveal
           v-for="(section, i) in enabledSections"

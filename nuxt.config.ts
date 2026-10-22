@@ -41,7 +41,7 @@ export default defineNuxtConfig({
     '@fontsource/cinzel/latin-600.css',
     '@fontsource/cormorant-garamond/latin-500.css',
     '@fontsource/cormorant-garamond/latin-600.css',
-    '@fontsource-variable/inter/opsz.css',
+    '@fontsource-variable/nunito/wght.css',
     '@fontsource/jetbrains-mono/latin-400.css',
     '~/assets/css/main.css',
   ],
@@ -134,7 +134,7 @@ export default defineNuxtConfig({
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover',
         },
-        { name: 'theme-color', content: '#262523' },
+        { name: 'theme-color', content: '#121a2c' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
       link: [

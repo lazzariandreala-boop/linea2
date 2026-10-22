@@ -51,7 +51,7 @@ const profileUrl = computed(() => `https://www.instagram.com/${props.handle}/`)
     :href="profileUrl"
     target="_blank"
     rel="noopener noreferrer"
-    class="card-depth group flex min-h-[340px] flex-col items-center justify-center gap-5 overflow-hidden rounded-card bg-linear-to-br from-brass via-[#5b4a33] to-raw p-8 text-center shadow-card"
+    class="card-depth group flex min-h-[240px] flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-linear-to-br from-brass via-[#5b4a33] to-raw p-6 text-center shadow-card"
   >
     <span class="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-black/25 text-white">
       <SocialIcon name="instagram" class="h-7 w-7" />

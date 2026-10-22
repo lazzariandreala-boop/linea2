@@ -14,7 +14,7 @@ useSeoHead({
 </script>
 
 <template>
-  <div class="site-container py-12 sm:py-16">
+  <div class="site-container py-8 sm:py-10">
     <div class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
       <UiReveal>
         <p class="eyebrow text-accent">Studio</p>
@@ -55,7 +55,7 @@ useSeoHead({
       </UiReveal>
     </div>
 
-    <ul class="mt-16 grid gap-px overflow-hidden rounded-card border border-fg/10 bg-fg/10 sm:grid-cols-3">
+    <ul class="mt-10 grid gap-px overflow-hidden rounded-card border border-fg/10 bg-fg/10 sm:grid-cols-3">
       <li v-for="v in VALUES" :key="v.title" class="bg-bg p-6">
         <h3 class="text-sm tracking-[0.12em] text-brass-hi">{{ v.title }}</h3>
         <p class="mt-3 text-sm text-fg/70">{{ v.text }}</p>

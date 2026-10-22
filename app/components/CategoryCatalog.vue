@@ -55,7 +55,7 @@ useSeoHead({
 </script>
 
 <template>
-  <div class="site-container py-12 sm:py-16">
+  <div class="site-container py-8 sm:py-10">
     <UiReveal>
       <UiSectionHeading eyebrow="Shop" :title="title" :subtitle="description" as="h1" />
     </UiReveal>
@@ -92,7 +92,7 @@ useSeoHead({
       </div>
     </section>
 
-    <h2 v-if="!category" class="mt-14 text-title text-fg">Ready to ship</h2>
+    <h2 v-if="!category" class="mt-10 text-title text-fg">Ready to ship</h2>
     <div class="mt-8">
       <FilterSortBar v-model:sort="sort" v-model:tag="tag" :tags="tags" :count="displayed.length" />
     </div>

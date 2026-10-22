@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
 .ctrl button {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 0;
   display: grid;
   place-items: center;

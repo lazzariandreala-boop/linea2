@@ -58,7 +58,7 @@ useSeoHead({
     </section>
 
     <!-- Steps -->
-    <section v-if="tutorial.steps.length" class="mx-auto mt-12 max-w-2xl">
+    <section v-if="tutorial.steps.length" class="mx-auto mt-8 max-w-2xl">
       <h2 class="font-display text-title text-fg">{{ t((m) => m.common.steps) }}</h2>
       <div class="mt-6">
         <StepList :steps="tutorial.steps" />
@@ -66,7 +66,7 @@ useSeoHead({
     </section>
 
     <!-- Products used -->
-    <section v-if="tutorial.relatedProducts.length" class="mt-14">
+    <section v-if="tutorial.relatedProducts.length" class="mt-10">
       <h2 class="font-display text-title text-fg">{{ t((m) => m.common.relatedProducts) }}</h2>
       <div class="mt-6">
         <ProductGrid :products="tutorial.relatedProducts" />
@@ -74,7 +74,7 @@ useSeoHead({
     </section>
 
     <!-- CTA -->
-    <div v-if="tutorial.cta" class="mt-12 flex justify-center">
+    <div v-if="tutorial.cta" class="mt-8 flex justify-center">
       <CtaButton :cta="tutorial.cta" size="lg" />
     </div>
   </article>

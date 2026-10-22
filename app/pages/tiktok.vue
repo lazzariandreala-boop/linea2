@@ -9,7 +9,7 @@ useSeoHead({
 </script>
 
 <template>
-  <div class="site-container py-12 sm:py-16">
+  <div class="site-container py-8 sm:py-10">
     <UiReveal>
       <UiSectionHeading
         eyebrow="TikTok"
