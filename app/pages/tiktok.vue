@@ -24,18 +24,11 @@ useSeoHead({
       v-if="feed.tiktok.length"
       class="mx-auto mt-10 grid max-w-sm grid-cols-1 gap-5 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3"
     >
-      <UiReveal
-        v-for="(post, i) in feed.tiktok"
-        :key="post.id"
-        :delay="Math.min(i, 6) * 70"
-        :y="20"
-      >
-        <SocialVideoCard :post="post" />
-      </UiReveal>
+      <SocialVideoCard v-for="post in feed.tiktok" :key="post.id" :post="post" />
     </div>
 
     <!-- The profile embed always lists the latest videos on its own -->
-    <div class="mx-auto mt-10 max-w-2xl">
+    <div class="mt-10">
       <SocialTikTokProfile :handle="feed.handles.tiktok" />
     </div>
   </div>

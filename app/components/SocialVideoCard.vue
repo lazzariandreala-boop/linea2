@@ -9,7 +9,10 @@ const loaded = ref(false)
 </script>
 
 <template>
-  <div class="card-depth relative overflow-hidden rounded-card bg-linear-to-b from-wash to-raw shadow-card">
+  <div
+    class="relative overflow-hidden rounded-card bg-linear-to-b from-wash to-raw shadow-card"
+    :class="{ 'card-depth': !loaded }"
+  >
     <template v-if="!loaded">
       <div class="aspect-[9/16]">
         <img
@@ -47,7 +50,7 @@ const loaded = ref(false)
     </template>
 
     <ClientOnly v-else>
-      <div class="bg-white p-2">
+      <div class="p-2">
         <TikTokEmbed :video-url="post.permalink" :video-id="post.id" :title="post.caption" />
       </div>
     </ClientOnly>
