@@ -1,10 +1,10 @@
 /**
- * Canvas painters for the Stella configurator: denim weaves, linings, patch
+ * Canvas painters for the Stella configurator: woven denim twill, linings, patch
  * art, hardware and monogram swatches, the blurred studio backdrop. Everything
  * is procedural so the configurator needs no texture downloads; replace with
  * real fabric scans later without touching the 3D code. Browser-only.
  */
-import { STELLA_THREAD as THREAD, WASH, findOption, type StellaOption, type StellaState } from './options'
+import { STELLA_THREAD as THREAD, WASH, findOption, type StellaOption } from './options'
 
 type Ctx = CanvasRenderingContext2D
 type Rng = () => number
@@ -44,55 +44,147 @@ export function mix(a: string, b: string, t: number): string {
 }
 
 export interface DenimSpec {
-  hex: string
+  /** Dyed lengthwise yarn (the colour you see most). */
+  warp: string
+  /** Undyed crosswise yarn peeking through the twill. */
+  weft: string
+  /** 0..1: lighter yarn cores and worn high points. */
+  fade: number
   textured?: boolean
   distressed?: boolean
 }
 
-export function denim(w: DenimSpec, size: number, seed = 3): HTMLCanvasElement {
-  const c = canvas(size)
-  const g = ctx(c)
+export function denimSpec(o: { warp: string; weft: string; fade: number; textured?: boolean; distressed?: boolean }, darken = 0): DenimSpec {
+  return {
+    warp: darken ? mix(o.warp, '#000000', darken) : o.warp,
+    weft: darken ? mix(o.weft, '#000000', darken) : o.weft,
+    fade: o.fade,
+    textured: o.textured,
+    distressed: o.distressed,
+  }
+}
+
+/** Tileable value noise on a `cells`×`cells` lattice, sampled at 0..1. */
+function periodicNoise(cells: number, r: Rng): (x: number, y: number) => number {
+  const g = Float32Array.from({ length: cells * cells }, () => r())
+  const at = (i: number, j: number) => g[((j % cells) + cells) % cells * cells + (((i % cells) + cells) % cells)]!
+  return (x, y) => {
+    const fx = x * cells
+    const fy = y * cells
+    const i = Math.floor(fx)
+    const j = Math.floor(fy)
+    const tx = fx - i
+    const ty = fy - j
+    const sx = tx * tx * (3 - 2 * tx)
+    const sy = ty * ty * (3 - 2 * ty)
+    const a = at(i, j) + (at(i + 1, j) - at(i, j)) * sx
+    const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * sx
+    return a + (b - a) * sy
+  }
+}
+
+const WARPS = 128
+const WEFTS = 64
+
+/**
+ * Woven 3/1 right-hand twill, pixel by pixel: each dyed warp yarn floats over
+ * three wefts and under one, so the pale weft shows as the steep diagonal of
+ * real jeans. Yarns get their own tone and slubs (thick/thin spots where the
+ * white core shows), the surface fades on the high points, and everything
+ * tiles seamlessly. Returns the colour map and a matching height map.
+ */
+export function denimWeave(w: DenimSpec, size = 512, seed = 3): { map: HTMLCanvasElement; bump: HTMLCanvasElement } {
   const r = rng(seed)
-  const k = size / 512
-  g.fillStyle = w.hex
-  g.fillRect(0, 0, size, size)
-  g.lineWidth = 1.3 * Math.max(k, 0.5)
-  for (let i = -size; i < size * 2; i += 3 * Math.max(k, 0.6)) {
-    g.strokeStyle = `rgba(255,255,255,${(0.03 + r() * 0.08).toFixed(3)})`
-    g.beginPath()
-    g.moveTo(i, 0)
-    g.lineTo(i - size * 0.7, size)
-    g.stroke()
-  }
-  for (let s = 0; s < size * 6; s++) {
-    g.fillStyle = `rgba(255,255,255,${(r() * 0.07).toFixed(3)})`
-    g.fillRect(r() * size, r() * size, (1 + r() * 5) * k, Math.max(1, k))
-  }
-  for (let f = 0; f < 7; f++) {
-    const x = r() * size
-    const gr = g.createLinearGradient(x - 40 * k, 0, x + 40 * k, 0)
-    gr.addColorStop(0, 'rgba(255,255,255,0)')
-    gr.addColorStop(0.5, 'rgba(255,255,255,.06)')
-    gr.addColorStop(1, 'rgba(255,255,255,0)')
-    g.fillStyle = gr
-    g.fillRect(x - 40 * k, 0, 80 * k, size)
-  }
-  if (w.textured) {
-    for (let t = 0; t < size * 8; t++) {
-      g.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.25)'
-      g.fillRect(r() * size, r() * size, 2 * k, 2 * k)
+  const warp = hexRgb(w.warp)
+  const weft = hexRgb(w.weft)
+  // The faded core of a ring-dyed yarn: halfway to the undyed cotton.
+  const core = warp.map((v, i) => v + (weft[i]! - v) * 0.55)
+  const tone = Float32Array.from({ length: WARPS }, () => (r() - 0.5) * 2)
+  const weftTone = Float32Array.from({ length: WEFTS }, () => (r() - 0.5) * 2)
+  const slub = Array.from({ length: WARPS }, () => periodicNoise(12, r))
+  const wobble = Array.from({ length: WARPS }, () => periodicNoise(5, r))
+  const cloud = periodicNoise(4, r)
+  const cloud2 = periodicNoise(13, r)
+  const wear = periodicNoise(3, r)
+  const map = canvas(size)
+  const bump = canvas(size)
+  const img = ctx(map).createImageData(size, size)
+  const hgt = ctx(bump).createImageData(size, size)
+  const cw = size / WARPS
+  const ch = size / WEFTS
+  // What shows of the weft is half-hidden and picks up indigo from the warp.
+  const wv = weft.map((v, i) => v * 0.55 + warp[i]! * 0.45)
+  for (let y = 0; y < size; y++) {
+    const v = y / size
+    for (let x = 0; x < size; x++) {
+      const u = x / size
+      // Yarns wander a little, so the weave never looks drawn with a ruler.
+      const i0 = Math.floor(x / cw)
+      const xs = x / cw + (wobble[i0]!(0.5, v) - 0.5) * 0.5
+      const i = ((Math.floor(xs) % WARPS) + WARPS) % WARPS
+      const fx = xs - Math.floor(xs)
+      const ys = y / ch + (cloud2(u, 0.5) - 0.5) * 0.4
+      const j = ((Math.floor(ys) % WEFTS) + WEFTS) % WEFTS
+      const fy = ys - Math.floor(ys)
+      const phase = (i + j) % 4
+      const lo = cloud(u, v) * 0.6 + cloud2(u, v) * 0.4
+      let rr: number, gg: number, bb: number, h: number
+      if (phase === 0) {
+        h = Math.sin(Math.PI * fx) ** 0.8 * Math.sin(Math.PI * fy) ** 0.8
+        const k = (0.8 + 0.2 * h) * (1 + weftTone[j]! * 0.07)
+        const m = 0.55 + 0.45 * h
+        rr = (warp[0]! + (wv[0]! - warp[0]!) * m) * k
+        gg = (warp[1]! + (wv[1]! - warp[1]!) * m) * k
+        bb = (warp[2]! + (wv[2]! - warp[2]!) * m) * k
+        h *= 0.4
+      } else {
+        const t = (phase - 1 + fy) / 3
+        h = Math.sin(Math.PI * fx) ** 0.45 * Math.sin(Math.PI * t) ** 0.25
+        const s = slub[i]!(0.5, v)
+        const f = Math.min(1, w.fade * (0.25 + 1.0 * lo) * (0.6 + 0.5 * h) + Math.max(0, s - 0.68) * 1.1 * (0.2 + w.fade))
+        const k = (0.82 + 0.18 * h) * (1 + tone[i]! * 0.06)
+        rr = (warp[0]! + (core[0]! - warp[0]!) * f) * k
+        gg = (warp[1]! + (core[1]! - warp[1]!) * f) * k
+        bb = (warp[2]! + (core[2]! - warp[2]!) * f) * k
+        h = 0.5 + 0.5 * h
+      }
+      if (w.distressed) {
+        const d = wear(u, v)
+        if (d > 0.6) {
+          // Abrasion: soft, mostly lifts the warp towards its white core.
+          const m = Math.min(1, (d - 0.6) * 2.2) * (phase === 0 ? 0.35 : 0.22)
+          rr += (weft[0]! - rr) * m
+          gg += (weft[1]! - gg) * m
+          bb += (weft[2]! - bb) * m
+        }
+      }
+      const n = 1 + (r() - 0.5) * (w.textured ? 0.14 : 0.05)
+      const o = (y * size + x) * 4
+      img.data[o] = rr * n
+      img.data[o + 1] = gg * n
+      img.data[o + 2] = bb * n
+      img.data[o + 3] = 255
+      const hv = h * 255
+      hgt.data[o] = hgt.data[o + 1] = hgt.data[o + 2] = hv
+      hgt.data[o + 3] = 255
     }
   }
-  if (w.distressed) {
-    for (let d = 0; d < 26; d++) {
-      const dx = r() * size
-      const dy = r() * size
-      const dw = (10 + r() * 30) * k
-      g.fillStyle = 'rgba(235,238,242,.75)'
-      for (let j = 0; j < 6; j++) g.fillRect(dx, dy + j * 2.2 * k, dw * (0.4 + r() * 0.6), 1.1 * k)
-    }
+  ctx(map).putImageData(img, 0, 0)
+  ctx(bump).putImageData(hgt, 0, 0)
+  return { map, bump }
+}
+
+const weaveCache = new Map<string, { map: HTMLCanvasElement; bump: HTMLCanvasElement }>()
+
+/** Cached weave: painting one costs tens of ms, so each colour is done once. */
+export function denim(w: DenimSpec, size = 512, seed = 3) {
+  const key = `${w.warp}${w.weft}${w.fade}${w.textured ? 't' : ''}${w.distressed ? 'd' : ''}|${size}|${seed}`
+  let hit = weaveCache.get(key)
+  if (!hit) {
+    hit = denimWeave(w, size, seed)
+    weaveCache.set(key, hit)
   }
-  return c
+  return hit
 }
 
 export function lining(id: string, size: number): HTMLCanvasElement {
@@ -273,7 +365,10 @@ export function swatchURL(kind: string, o: StellaOption): string {
   const S = 104
   const c = canvas(S)
   const g = ctx(c)
-  if (kind === 'wash') g.drawImage(denim({ hex: o.hex ?? '#1F2C4C', textured: o.textured, distressed: o.distressed }, 256, 5), 0, 0, S, S)
+  if (kind === 'wash') {
+    const wo = findOption(WASH, o.id)
+    g.drawImage(denim(denimSpec(wo)).map, 0, 0, 220, 220, 0, 0, S, S)
+  }
   else if (kind === 'lining') g.drawImage(lining(o.id, 128), 0, 0, S, S)
   else if (kind === 'patch') {
     g.fillStyle = '#2A3550'
@@ -284,9 +379,13 @@ export function swatchURL(kind: string, o: StellaOption): string {
   return c.toDataURL()
 }
 
-/** Oval denim patch with the chosen artwork, sized to the decal's aspect. */
-export function patchCanvas(s: StellaState, aspect: number): HTMLCanvasElement {
-  const main = findOption(WASH, s.wash[0] ?? 'indigo')
+/**
+ * Oval denim patch with the chosen artwork, sized to the decal's aspect.
+ * `tile` is how many canvas pixels one weave tile spans, so the patch's
+ * denim matches the bag's scale; the grain is turned, as on a cut piece.
+ */
+export function patchCanvas(style: string, washId: string, aspect: number, tile = 512): HTMLCanvasElement {
+  const main = findOption(WASH, washId)
   const W = 1024
   const H = Math.round(1024 * aspect)
   const c = canvas(W, H)
@@ -295,7 +394,9 @@ export function patchCanvas(s: StellaState, aspect: number): HTMLCanvasElement {
   g.beginPath()
   g.ellipse(W / 2, H / 2, W * 0.47, H * 0.47, 0, 0, 7)
   g.clip()
-  g.fillStyle = g.createPattern(denim({ hex: main.hex!, textured: main.textured, distressed: main.distressed }, 512, 41), 'repeat')!
+  const pat = g.createPattern(denim(denimSpec(main)).map, 'repeat')!
+  pat.setTransform(new DOMMatrix().rotate(-24).scale(tile / 512))
+  g.fillStyle = pat
   g.fillRect(0, 0, W, H)
   g.fillStyle = 'rgba(0,0,0,.08)'
   g.fillRect(0, 0, W, H)
@@ -312,18 +413,18 @@ export function patchCanvas(s: StellaState, aspect: number): HTMLCanvasElement {
   g.setLineDash([16, 11])
   g.stroke()
   g.setLineDash([])
-  if (s.patch !== 'none') patchArt(g, s.patch, W / 2, H / 2, H * 0.36, rng(4))
+  patchArt(g, style, W / 2, H / 2, H * 0.36, rng(4))
   return c
 }
 
 /** Monogram decal: embroidered brass letters or a stitched leather tag. */
-export function monoCanvas(s: StellaState): HTMLCanvasElement {
+export function monoCanvas(finish: string, initials: string): HTMLCanvasElement {
   const c = canvas(512, 256)
   const g = ctx(c)
-  const txt = s.initials || 'L2'
+  const txt = initials || 'L2'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  if (s.finish === 'leather') {
+  if (finish === 'leather') {
     g.fillStyle = '#7B4B2C'
     g.beginPath()
     g.roundRect(20, 20, 472, 216, 20)
@@ -336,7 +437,7 @@ export function monoCanvas(s: StellaState): HTMLCanvasElement {
     g.fillStyle = '#4A2915'
     g.font = `600 ${txt.length > 2 ? 120 : 150}px "Cormorant Garamond", Georgia, serif`
     g.fillText(txt, 256, 136)
-  } else if (s.finish === 'embroidery') {
+  } else {
     g.font = `600 ${txt.length > 2 ? 150 : 190}px "Cormorant Garamond", Georgia, serif`
     g.fillStyle = 'rgba(0,0,0,.4)'
     g.fillText(txt, 260, 134)

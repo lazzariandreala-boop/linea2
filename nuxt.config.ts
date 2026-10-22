@@ -163,4 +163,17 @@ export default defineNuxtConfig({
     strict: true,
     typeCheck: false, // run explicitly via `nuxi typecheck` in CI
   },
+
+  hooks: {
+    // The 3D viewer (three.js, ~150 kB gzip) loads only when asked for:
+    // don't let the browser prefetch it on /customize.
+    'build:manifest'(manifest) {
+      for (const entry of Object.values(manifest)) {
+        if (/Bag3DViewer|stella\/scene|node_modules\/three\//.test(entry.src ?? entry.file)) {
+          entry.prefetch = false
+          entry.preload = false
+        }
+      }
+    },
+  },
 })

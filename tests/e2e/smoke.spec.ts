@@ -74,6 +74,37 @@ test('customize: picking options updates the price and adds the bag to the cart'
   await expect(price).toHaveText('€410.00')
   await page.getByRole('button', { name: /Street Art/ }).click()
   await expect(price).toHaveText('€415.00')
+  // Every extra patch is priced on its own (Organic Patterns, +€25).
+  await page.getByRole('button', { name: '+ ADD A PATCH' }).click()
+  await expect(price).toHaveText('€440.00')
+  await page.getByRole('button', { name: 'Rimuovi toppa 2' }).click()
+  await expect(price).toHaveText('€415.00')
   await page.getByRole('button', { name: 'ADD TO BAG' }).click()
   await expect(page.getByRole('link', { name: /Carrello \(1\)/ })).toBeVisible()
+})
+
+test('customize: the bag is 2D, decals drag, lining opens the inside, 3D only on request', async ({ page }) => {
+  const glb: string[] = []
+  page.on('request', (r) => {
+    if (r.url().endsWith('.glb')) glb.push(r.url())
+  })
+  await page.goto('/customize?model=stella', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bag2d img.layer').first()).toHaveAttribute('src', /\/bags2d\/stella\/front-body-indigo\.webp$/)
+
+  const mono = page.locator('.decal.mono')
+  const before = await mono.boundingBox()
+  await mono.hover()
+  await page.mouse.down()
+  await page.mouse.move(before!.x + before!.width / 2 + 40, before!.y + before!.height / 2 + 30, { steps: 6 })
+  await page.mouse.up()
+  const after = await mono.boundingBox()
+  expect(after!.x).toBeGreaterThan(before!.x + 20)
+
+  await page.getByRole('button', { name: 'Plain Navy' }).click()
+  await expect(page.locator('.bag2d img.layer').first()).toHaveAttribute('src', /top-indigo-/)
+
+  expect(glb).toEqual([])
+  await page.getByRole('button', { name: 'VIEW IN 3D' }).first().click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect.poll(() => glb.length).toBeGreaterThan(0)
 })
