@@ -61,12 +61,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 bg-[linear-gradient(90deg,rgb(232_218_196/0.85),rgb(244_240_231/0.85)_50%,rgb(232_218_196/0.85))] backdrop-blur-md">
-    <p class="on-denim py-2 text-center text-[10.5px] font-semibold uppercase tracking-[0.22em]">
-      Denim recuperato · Fatto a mano in Italia
-    </p>
+  <p class="on-denim py-2 text-center text-[10.5px] font-semibold uppercase tracking-[0.22em]">
+    Denim recuperato · Fatto a mano in Italia
+  </p>
 
-    <div class="border-b border-fg/10"><div class="site-container relative grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 md:h-20">
+  <!-- Floating pill header: stays on top while the page scrolls under it. -->
+  <header class="sticky top-0 z-50 px-(--site-gutter) pt-3">
+    <div class="mx-auto max-w-[78rem] rounded-full border border-fg/10 bg-[linear-gradient(90deg,rgb(228_212_186/0.88),rgb(248_245_238/0.9)_50%,rgb(228_212_186/0.88))] shadow-card backdrop-blur-md"><div class="relative grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 md:h-16 md:px-8">
       <!-- Desktop nav (left) / mobile menu button -->
       <div class="flex items-center">
         <button
@@ -188,10 +189,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <nav
         v-if="open"
         id="mobile-nav"
-        class="border-b border-fg/10 bg-bg md:hidden"
+        class="mx-auto mt-2 max-w-[78rem] rounded-panel border border-fg/10 bg-surface shadow-card md:hidden"
         :aria-label="t((m) => m.nav.menu)"
       >
-        <div class="site-container flex flex-col py-2">
+        <div class="flex flex-col px-5 py-2">
           <NuxtLink
             v-for="link in links"
             :key="link.to"
@@ -203,7 +204,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </NuxtLink>
           <NuxtLink
             :to="journal.to"
-            class="flex min-h-[52px] items-center border-b border-fg/10 font-display text-xl text-fg"
+            class="flex min-h-[52px] items-center font-display text-xl text-fg"
           >
             {{ t(journal.label) }}
           </NuxtLink>
