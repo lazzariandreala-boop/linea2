@@ -59,6 +59,9 @@ export default defineNuxtConfig({
     // NEVER exposed to the client; override via NUXT_PAYPAL_SECRET / _ENV.
     paypalSecret: '',
     paypalEnv: 'sandbox', // 'sandbox' | 'live'
+    // Long-lived Instagram API token (Instagram Login, Business/Creator
+    // account). Server-only; empty => Instagram shows a profile link card.
+    instagramToken: '',
     public: {
       // Firebase web config (PUBLIC by design). Defaults target the linea2
       // project; override any field via NUXT_PUBLIC_FIREBASE_* env vars.

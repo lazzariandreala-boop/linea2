@@ -30,14 +30,14 @@ const VALUES = [
 const enabledSections = computed(() => home.value!.sections.filter((s) => s.enabled))
 const featured = computed(() => home.value!.featuredProducts)
 
-const { videos } = await useTikTokVideos()
 const { tutorials } = await useTutorials()
 
 function teaserMedia(key: HomeSectionKey) {
   if (key === 'accessories' || key === 'bags') {
     return featured.value.find((p) => p.category === key)?.gallery[0] ?? null
   }
-  if (key === 'tiktok') return videos.value[0]?.thumbnail ?? null
+  // TikTok covers live on the platform CDN; the teaser keeps its gradient.
+  if (key === 'tiktok') return null
   return tutorials.value[0]?.finalResultImage ?? null
 }
 
@@ -96,6 +96,9 @@ useSeoHead({
         <ProductGrid :products="featured" />
       </div>
     </section>
+
+    <!-- TikTok + Instagram -->
+    <SocialShowcase />
 
     <!-- Section teasers -->
     <section class="site-container py-8 pb-20">
