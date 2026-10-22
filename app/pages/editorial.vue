@@ -1,12 +1,11 @@
 <script setup lang="ts">
-// Editorial: the brand's videos in one place. TikTok clips and tutorials come
-// from the CMS today; Instagram Reels and YouTube (videos + Shorts) plug in
-// here once their accounts/API keys are connected.
+// Editorial: the brand's videos in one place. TikTok and Instagram come from
+// /api/social/feed (see SOCIAL.md), tutorials from the CMS.
 const { t } = useT()
-const { videos } = await useTikTokVideos()
+const { feed } = useSocialFeed()
 const { tutorials } = await useTutorials()
 
-const clips = computed(() => videos.value.slice(0, 6))
+const clips = computed(() => feed.value.tiktok.slice(0, 6))
 const guides = computed(() => tutorials.value.slice(0, 3))
 
 const CHANNELS = [
@@ -17,7 +16,6 @@ const CHANNELS = [
 useSeoHead({
   title: 'Editorial',
   description: 'Video, tutorial e dietro le quinte dallo studio Linea 2: guarda come nasce ogni borsa.',
-  image: videos.value[0]?.thumbnail?.url ?? null,
 })
 </script>
 
@@ -49,17 +47,37 @@ useSeoHead({
       </li>
     </ul>
 
-    <section v-if="clips.length" class="mt-14">
+    <section class="mt-14">
       <div class="flex items-end justify-between gap-4">
         <h2 class="text-title text-fg">TikTok</h2>
         <NuxtLink to="/tiktok" class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg">
           {{ t((m) => m.common.viewAll) }}
         </NuxtLink>
       </div>
-      <div class="mx-auto mt-6 grid max-w-sm grid-cols-1 gap-5 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
-        <UiReveal v-for="(video, i) in clips" :key="video.documentId" :delay="Math.min(i, 6) * 70" :y="20">
-          <TikTokFacade :video="video" />
+      <div v-if="clips.length" class="mx-auto mt-6 grid max-w-sm grid-cols-1 gap-5 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
+        <UiReveal v-for="(post, i) in clips" :key="post.id" :delay="Math.min(i, 6) * 70" :y="20">
+          <SocialVideoCard :post="post" />
         </UiReveal>
+      </div>
+      <div class="mx-auto mt-6 max-w-2xl">
+        <SocialTikTokProfile :handle="feed.handles.tiktok" />
+      </div>
+    </section>
+
+    <section class="mt-16">
+      <div class="flex items-end justify-between gap-4">
+        <h2 class="text-title text-fg">Instagram</h2>
+        <a
+          :href="`https://www.instagram.com/${feed.handles.instagram}/`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="label-caps text-xs text-muted underline underline-offset-4 hover:text-fg"
+        >
+          @{{ feed.handles.instagram }} ↗
+        </a>
+      </div>
+      <div class="mt-6">
+        <SocialInstagramGrid :posts="feed.instagram" :handle="feed.handles.instagram" :limit="12" />
       </div>
     </section>
 
