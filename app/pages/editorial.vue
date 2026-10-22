@@ -55,11 +55,9 @@ useSeoHead({
         </NuxtLink>
       </div>
       <div v-if="clips.length" class="mx-auto mt-6 grid max-w-sm grid-cols-1 gap-5 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
-        <UiReveal v-for="(post, i) in clips" :key="post.id" :delay="Math.min(i, 6) * 70" :y="20">
-          <SocialVideoCard :post="post" />
-        </UiReveal>
+        <SocialVideoCard v-for="post in clips" :key="post.id" :post="post" />
       </div>
-      <div class="mx-auto mt-6 max-w-2xl">
+      <div class="mt-6">
         <SocialTikTokProfile :handle="feed.handles.tiktok" />
       </div>
     </section>

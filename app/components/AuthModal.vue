@@ -9,6 +9,7 @@ const email = ref('')
 const password = ref('')
 const displayName = ref('')
 const loading = ref(false)
+useGlobalLoading().bind(() => loading.value)
 const error = ref('')
 
 const title = computed(() =>

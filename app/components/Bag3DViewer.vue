@@ -18,6 +18,7 @@ const host = ref<HTMLElement | null>(null)
 const closeBtn = ref<HTMLButtonElement | null>(null)
 const status = ref<'loading' | 'ready' | 'error'>('loading')
 const zoomed = ref(false)
+useGlobalLoading().bind(() => status.value === 'loading')
 const name = computed(() => findBag(props.state.model).name)
 let scene: StellaScene | null = null
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * Home section: TikTok (featured videos, else the auto-updating profile
- * embed) beside the latest Instagram posts.
+ * Home section: TikTok (featured videos, then the auto-updating profile embed)
+ * and the latest Instagram posts, each the full width of the container.
  */
 const { feed, profileUrl } = useSocialFeed()
-const videos = computed(() => feed.value.tiktok.slice(0, 2))
+const videos = computed(() => feed.value.tiktok.slice(0, 4))
 </script>
 
 <template>
@@ -32,16 +32,13 @@ const videos = computed(() => feed.value.tiktok.slice(0, 2))
       </div>
     </UiReveal>
 
-    <div class="mt-8 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <UiReveal>
-        <div v-if="videos.length" class="grid grid-cols-2 gap-3">
-          <SocialVideoCard v-for="post in videos" :key="post.id" :post="post" />
-        </div>
-        <SocialTikTokProfile v-else :handle="feed.handles.tiktok" />
-      </UiReveal>
-      <UiReveal :delay="80">
-        <SocialInstagramGrid :posts="feed.instagram" :handle="feed.handles.instagram" :limit="6" />
-      </UiReveal>
+    <!-- Not wrapped in UiReveal: a transformed parent can stall the TikTok iframe. -->
+    <div class="mt-8 grid gap-4">
+      <div v-if="videos.length" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SocialVideoCard v-for="post in videos" :key="post.id" :post="post" />
+      </div>
+      <SocialTikTokProfile :handle="feed.handles.tiktok" />
+      <SocialInstagramGrid :posts="feed.instagram" :handle="feed.handles.instagram" :limit="6" />
     </div>
 
     <div class="mt-6 text-right">

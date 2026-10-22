@@ -21,5 +21,8 @@ const { t } = useT()
 
     <!-- Global login/registration modal (opened from the header avatar). -->
     <AuthModal />
+
+    <!-- Site-wide loading overlay (page changes, embeds, 3D, sign-in). -->
+    <AppLoader />
   </div>
 </template>
