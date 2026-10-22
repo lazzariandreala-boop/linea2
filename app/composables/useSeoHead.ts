@@ -1,5 +1,5 @@
 /** Default OG image shipped in /public (1200×630). */
-const DEFAULT_OG = '/uploads/og-default_8a1d44.png'
+const DEFAULT_OG = '/uploads/og-default_8a1d44.jpg'
 const DEFAULT_OG_W = 1200
 const DEFAULT_OG_H = 630
 

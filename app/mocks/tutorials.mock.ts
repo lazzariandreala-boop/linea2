@@ -18,13 +18,13 @@ export const TUTORIALS: Tutorial[] = [
       'Dal nodo parigino alla fascia per capelli: tre modi semplici per indossare il foulard Aurora ogni giorno.',
     videoFile: null,
     videoEmbedUrl: 'https://www.tiktok.com/@linea2.upcycling/video/7300000000000000002',
-    finalResultImage: media('tut-foulard-finale_u01.png', 1200, 900, 'Risultato finale: foulard annodato al collo'),
+    finalResultImage: media('tut-foulard-finale_u01.jpg', 1200, 900, 'Risultato finale: foulard annodato al collo'),
     steps: [
       {
         id: 1,
         title: 'Prepara il foulard',
         body: 'Stendi il foulard su una superficie piana e piegalo in diagonale per ottenere un triangolo.',
-        image: media('tut-foulard-step_s01.png', 800, 600, 'Foulard piegato in diagonale'),
+        image: media('tut-foulard-step_s01.jpg', 800, 600, 'Foulard piegato in diagonale'),
       },
       {
         id: 2,
@@ -49,13 +49,13 @@ export const TUTORIALS: Tutorial[] = [
       'Pochi gesti per mantenere borse e cinture in pelle morbide e protette nel tempo.',
     videoFile: null,
     videoEmbedUrl: 'https://www.tiktok.com/@linea2.upcycling/video/7300000000000000003',
-    finalResultImage: media('tut-borsa-cura_u02.png', 1200, 900, 'Risultato finale: borsa in pelle curata e lucida'),
+    finalResultImage: media('tut-borsa-cura_u02.jpg', 1200, 900, 'Risultato finale: borsa in pelle curata e lucida'),
     steps: [
       {
         id: 3,
         title: 'Spolvera',
         body: 'Rimuovi la polvere con un panno in microfibra asciutto, seguendo il verso della pelle.',
-        image: media('tut-borsa-step_s02.png', 800, 600, 'Pulizia della pelle con panno in microfibra'),
+        image: media('tut-borsa-step_s02.jpg', 800, 600, 'Pulizia della pelle con panno in microfibra'),
       },
       {
         id: 4,
@@ -80,13 +80,13 @@ export const TUTORIALS: Tutorial[] = [
       'Abbiniamo pochette, occhiali e foulard per un look serale curato in cinque minuti.',
     videoFile: null,
     videoEmbedUrl: 'https://www.tiktok.com/@linea2.upcycling/video/7300000000000000001',
-    finalResultImage: media('tut-look-finale_u03.png', 1200, 900, 'Risultato finale: look completo per aperitivo'),
+    finalResultImage: media('tut-look-finale_u03.jpg', 1200, 900, 'Risultato finale: look completo per aperitivo'),
     steps: [
       {
         id: 5,
         title: 'Parti dalla base',
         body: 'Scegli un outfit monocromatico così gli accessori diventano protagonisti.',
-        image: media('tut-look-step_s03.png', 800, 600, 'Base monocromatica del look'),
+        image: media('tut-look-step_s03.jpg', 800, 600, 'Base monocromatica del look'),
       },
     ],
     relatedProducts: [

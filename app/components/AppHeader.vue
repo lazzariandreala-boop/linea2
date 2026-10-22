@@ -34,13 +34,15 @@ interface NavLink {
 // Main navigation from the Stella mockup. `match` keeps SHOP lit on the
 // category and product pages, and EDITORIAL on the video pages.
 const links: (NavLink & { match: string[] })[] = [
+  { to: '/', label: (m) => m.nav.home, match: [] },
   { to: '/shop', label: (m) => m.nav.shop, match: ['/shop', '/bags', '/accessories', '/products'] },
   { to: '/customize', label: (m) => m.nav.customize, match: ['/customize'] },
   { to: '/editorial', label: (m) => m.nav.editorial, match: ['/editorial', '/tiktok', '/tutorials'] },
   { to: '/studio', label: (m) => m.nav.studio, match: ['/studio'] },
 ]
 
-function isActive(link: { match: string[] }) {
+function isActive(link: { to: string; match: string[] }) {
+  if (link.to === '/') return route.path === '/'
   return link.match.some((p) => route.path === p || route.path.startsWith(`${p}/`))
 }
 
@@ -69,7 +71,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 border-b border-fg/10 bg-bg/85 backdrop-blur-md">
+  <header class="sticky top-0 z-50 border-b border-fg/10 bg-bg/70 backdrop-blur-md">
     <svg
       class="deco-lines pointer-events-none absolute -left-10 top-0 hidden h-[150px] w-[620px] lg:block"
       viewBox="0 0 620 150"

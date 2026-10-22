@@ -153,8 +153,9 @@ onMounted(() => {
       },
     })
     scene.apply({ ...state, wash: [...state.wash] })
-  } catch {
-    status.value = 'error' // no WebGL
+  } catch (err) {
+    console.error('[configurator] WebGL unavailable', err)
+    status.value = 'error'
   }
 })
 onBeforeUnmount(() => scene?.dispose())
@@ -392,7 +393,11 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   height: 100%;
 }
 .backdrop {
+  z-index: 0;
   object-fit: cover;
+}
+.gl {
+  z-index: 1;
 }
 .gl :deep(canvas) {
   display: block;
@@ -402,6 +407,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .vp-ui {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
 }
 .vp-ui > * {
@@ -792,14 +798,20 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 
 /* Light theme: inspector text sits on white glass */
 :root[data-theme='light'] .stella {
-  --line: #e2e4e9;
+  --line: rgb(140 58 23 / 0.18);
 }
 :root[data-theme='light'] .add {
-  background: var(--color-selvedge);
-  color: var(--color-parchment);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+:root[data-theme='light'] .add:hover {
+  background: var(--color-primary-strong);
 }
 :root[data-theme='light'] .sw {
-  border-color: #e2e4e9;
+  border-color: rgb(140 58 23 / 0.2);
+}
+:root[data-theme='light'] .ini input {
+  background: rgb(255 255 255 / 0.6);
 }
 
 @media (max-width: 1100px) {

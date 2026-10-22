@@ -3,6 +3,7 @@ const { t } = useT()
 const config = useRuntimeConfig()
 const year = new Date().getFullYear()
 const LINKS = [
+  { to: '/', label: 'Home' },
   { to: '/shop', label: 'Shop' },
   { to: '/customize', label: 'Customize' },
   { to: '/editorial', label: 'Editorial' },
