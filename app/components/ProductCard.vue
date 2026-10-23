@@ -8,7 +8,9 @@ const props = withDefaults(
 
 const { t } = useT()
 const cover = computed(() => props.product.gallery[0] ?? null)
+const second = computed(() => props.product.gallery[1] ?? null)
 const price = computed(() => formatPrice(props.product.price))
+const category = computed(() => (props.product.category === 'accessories' ? t((m) => m.nav.accessories) : t((m) => m.nav.bags)))
 </script>
 
 <template>
@@ -21,17 +23,27 @@ const price = computed(() => formatPrice(props.product.price))
           :width="900"
           :height="1200"
           :sizes="sizes"
-          class="transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
+          img-class="zoom-img"
+        />
+        <!-- Second real photo on hover, when the product has one -->
+        <UiStrapiImage
+          v-if="second"
+          :media="second"
+          :width="900"
+          :height="1200"
+          :sizes="sizes"
+          alt=""
+          fill
+          class="opacity-0 transition-opacity duration-500 ease-out-soft group-hover:opacity-100"
         />
         <UiBadge v-if="product.featured" tone="accent" class="absolute left-3 top-3">
           {{ t((m) => m.common.featured) }}
         </UiBadge>
       </div>
-      <div class="mt-4 flex items-start justify-between gap-3 pr-12">
-        <div class="min-w-0">
-          <h3 class="font-display text-lg leading-snug text-fg">{{ product.title }}</h3>
-          <p v-if="price" class="mt-1 text-sm font-bold text-fg">{{ price }}</p>
-        </div>
+      <div class="mt-4 border-t border-line pt-3 pr-12">
+        <p class="text-[11px] uppercase tracking-[0.14em] text-muted">{{ category }}</p>
+        <h3 class="mt-1.5 font-display text-lg leading-snug text-ink">{{ product.title }}</h3>
+        <p v-if="price" class="price-tag mt-1 text-sm text-ink">{{ price }}</p>
       </div>
     </NuxtLink>
     <AddToCartButton :product="product" icon class="absolute bottom-0 right-0" />

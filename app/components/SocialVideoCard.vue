@@ -10,7 +10,7 @@ const loaded = ref(false)
 
 <template>
   <div
-    class="relative overflow-hidden rounded-card bg-linear-to-b from-wash to-raw shadow-card"
+    class="relative overflow-hidden rounded-card bg-navy"
     :class="{ 'card-depth': !loaded }"
   >
     <template v-if="!loaded">
@@ -35,9 +35,9 @@ const loaded = ref(false)
         @click="loaded = true"
       >
         <span
-          class="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 text-black shadow-float transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+          class="flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-black/20 text-white backdrop-blur-sm transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
         >
-          <svg class="ml-1 h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg class="ml-0.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M8 5v14l11-7z" />
           </svg>
         </span>

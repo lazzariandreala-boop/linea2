@@ -5,20 +5,20 @@ import type { SocialPost } from '#shared/types/social'
  * Latest Instagram posts as square tiles that open the post on Instagram (a
  * view there counts for the account). With no live feed, a profile card.
  */
-const props = withDefaults(defineProps<{ posts: SocialPost[]; handle: string; limit?: number }>(), { limit: 6 })
+const props = withDefaults(defineProps<{ posts: SocialPost[]; handle: string; limit?: number; compact?: boolean }>(), { limit: 6, compact: false })
 
 const shown = computed(() => props.posts.slice(0, props.limit))
 const profileUrl = computed(() => `https://www.instagram.com/${props.handle}/`)
 </script>
 
 <template>
-  <ul v-if="shown.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+  <ul v-if="shown.length" class="grid grid-cols-2 gap-2 sm:gap-3" :class="compact ? '' : 'sm:grid-cols-3'">
     <li v-for="post in shown" :key="post.id">
       <a
         :href="post.permalink"
         target="_blank"
         rel="noopener noreferrer"
-        class="card-depth group relative block aspect-square overflow-hidden rounded-card bg-linear-to-br from-wash to-raw shadow-card"
+        class="group relative block aspect-square overflow-hidden rounded-card bg-surface-2"
         :aria-label="post.caption ? `Apri su Instagram: ${post.caption.slice(0, 80)}` : 'Apri il post su Instagram'"
       >
         <img
@@ -51,17 +51,16 @@ const profileUrl = computed(() => `https://www.instagram.com/${props.handle}/`)
     :href="profileUrl"
     target="_blank"
     rel="noopener noreferrer"
-    class="group flex min-h-[220px] flex-col items-center justify-center gap-4 overflow-hidden rounded-card bg-ochre p-6 text-center text-denim"
+    class="group flex min-h-[260px] flex-col justify-between gap-6 overflow-hidden rounded-card border border-line bg-surface p-6 text-ink sm:p-7"
   >
-    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-denim/40">
-      <SocialIcon name="instagram" class="h-7 w-7" />
+    <span class="flex items-center justify-between gap-4">
+      <span class="eyebrow text-muted">Instagram</span>
+      <SocialIcon name="instagram" class="h-5 w-5" />
     </span>
     <span>
-      <span class="block font-mono text-sm">@{{ handle }}</span>
-      <span class="mt-2 block max-w-xs text-sm text-denim/80">Foto dei pezzi finiti, Reels e dietro le quinte dello studio.</span>
+      <span class="block font-display text-2xl">@{{ handle }}</span>
+      <span class="mt-2 block max-w-xs text-sm text-muted">Foto dei pezzi finiti, Reels e dietro le quinte dello studio.</span>
     </span>
-    <span class="label-caps rounded-lg border border-denim/50 px-5 py-2 text-xs transition-colors group-hover:bg-denim group-hover:text-ochre">
-      Segui su Instagram ↗
-    </span>
+    <span class="arrow-link self-start">Segui su Instagram</span>
   </a>
 </template>

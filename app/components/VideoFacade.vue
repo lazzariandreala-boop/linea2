@@ -29,7 +29,7 @@ const tiktokId = computed(() => (props.embedUrl ? parseTikTokVideoId(props.embed
 </script>
 
 <template>
-  <div class="relative overflow-hidden rounded-card bg-surface-2 shadow-card">
+  <div class="relative overflow-hidden rounded-card bg-surface-2">
     <template v-if="!loaded">
       <UiStrapiImage
         :media="poster"
@@ -45,7 +45,7 @@ const tiktokId = computed(() => (props.embedUrl ? parseTikTokVideoId(props.embed
         @click="loaded = true"
       >
         <span
-          class="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-on-primary shadow-float transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+          class="flex h-16 w-16 items-center justify-center rounded-full border border-white/80 bg-black/25 text-white backdrop-blur-sm transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
         >
           <svg class="ml-1 h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M8 5v14l11-7z" />

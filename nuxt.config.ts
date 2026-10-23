@@ -39,10 +39,9 @@ export default defineNuxtConfig({
   css: [
     '@fontsource-variable/newsreader/opsz.css',
     '@fontsource-variable/newsreader/opsz-italic.css',
-    '@fontsource/cormorant-garamond/latin-500.css',
+    // Cormorant 600 is only drawn into the monogram decal (configurator).
     '@fontsource/cormorant-garamond/latin-600.css',
-    '@fontsource-variable/nunito/wght.css',
-    '@fontsource/jetbrains-mono/latin-400.css',
+    '@fontsource-variable/instrument-sans/wght.css',
     '~/assets/css/main.css',
   ],
 
@@ -134,7 +133,7 @@ export default defineNuxtConfig({
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover',
         },
-        { name: 'theme-color', content: '#14283a' },
+        { name: 'theme-color', content: '#142638' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
       link: [

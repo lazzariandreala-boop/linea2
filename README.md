@@ -4,12 +4,17 @@ A modern, **mobile-first** showcase site for **Linea 2** — an *upcycling*
 accessories & bags brand (handmade from recovered materials).
 Most visitors arrive directly from **TikTok / Instagram on a phone**, so the
 experience is fast, visually striking, and degrades gracefully in in-app webviews.
-The look follows the **Stella design system**: charcoal canvas, brass accent,
-denim blues, Cinzel/Cormorant display type (dark by default, parchment light theme).
+The look is **quiet luxury meets contemporary Italian craft**: warm ivory and
+warm white editorial surfaces, midnight navy / indigo sections, muted brass as a
+rare accent, Newsreader (serif) for headlines and Instrument Sans for UI and
+text. All tokens (colours, type scale with `clamp()`, spacing, radii, widths)
+live in [`app/assets/css/main.css`](app/assets/css/main.css).
 Main sections: **Shop · Customize · Editorial · Studio**. `/customize` is a
 three.js configurator for the Stella bag (model in `public/models/stella.glb`,
 options and pricing in `app/utils/stella/`) that adds made-to-order lines to the
-cart. Cart, optional login and PayPal checkout run on Firebase (see
+cart. The configurator runs as a 2D step-by-step flow (Modello → Lavaggio →
+Fodera → Toppe → Metalli → Monogramma → Riepilogo); the 3D model loads only
+from the "Vedi in 3D" button. Cart, optional login and PayPal checkout run on Firebase (see
 [`FIREBASE_SETUP.md`](FIREBASE_SETUP.md)).
 
 ## Stack
@@ -113,3 +118,24 @@ npm run test
 npx playwright install chromium   # first run only
 npm run test:e2e
 ```
+
+## Foto da sostituire
+
+Every editorial picture is referenced from one place,
+[`app/utils/editorial.ts`](app/utils/editorial.ts) (plus `public/editorial/bag-<id>.webp`
+for the six models). They are still studio renders / placeholders. Replace them
+with real photographs at the same path and ratio, no code change needed:
+
+| File | Used for | Ratio |
+| --- | --- | --- |
+| `public/editorial/hero-stella.webp` | Home hero (real Stella bag) | 14:15, min 1400px wide |
+| `public/editorial/workbench.webp` | Brand story, Studio page | 7:5 |
+| `public/editorial/detail-seam.webp` | Macro: visible stitching | 3:2 |
+| `public/editorial/detail-patchwork.webp` | Macro: reconstructed denim / patchwork | 3:2 |
+| `public/editorial/detail-brass.webp` | Macro: brass hardware | 3:2 |
+| `public/editorial/bag-<id>.webp` | Collection photos of the six models | 5:6 |
+| `public/uploads/*` | Mock catalogue products and tutorials | 3:4 / 4:3 |
+
+Missing altogether: real studio/workshop photos (hands at work, sewing machine),
+a second angle for each of the six models, and pages for shipping, returns,
+privacy and cookies (the footer links them once they exist).

@@ -72,14 +72,23 @@ test('customize: picking options updates the price and adds the bag to the cart'
   await page.goto('/customize')
   const price = page.locator('.price')
   await expect(price).toHaveText('€410.00')
+  // Step through: model → wash → lining → patches.
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await expect(page.getByRole('heading', { name: 'Toppe patchwork' })).toBeVisible()
   await page.getByRole('button', { name: /Street Art/ }).click()
   await expect(price).toHaveText('€415.00')
   // Every extra patch is priced on its own (Organic Patterns, +€25).
-  await page.getByRole('button', { name: '+ AGGIUNGI UNA TOPPA' }).click()
+  await page.getByRole('button', { name: '+ Aggiungi una toppa' }).click()
   await expect(price).toHaveText('€440.00')
   await page.getByRole('button', { name: 'Rimuovi toppa 2' }).click()
   await expect(price).toHaveText('€415.00')
-  await page.getByRole('button', { name: 'AGGIUNGI AL CARRELLO' }).click()
+  // The last step sums everything up, line by line.
+  await page.getByRole('button', { name: /7\. Riepilogo/ }).click()
+  await expect(page.getByRole('heading', { name: 'Riepilogo' })).toBeVisible()
+  await expect(page.locator('.recap')).toContainText('Street Art')
+  await page.getByRole('button', { name: 'Aggiungi al carrello' }).click()
   await expect(page.getByRole('link', { name: /Carrello \(1\)/ })).toBeVisible()
 })
 
@@ -100,11 +109,12 @@ test('customize: the bag is 2D, decals drag, lining opens the inside, 3D only on
   const after = await mono.boundingBox()
   expect(after!.x).toBeGreaterThan(before!.x + 20)
 
+  await page.getByRole('button', { name: /3\. Fodera/ }).click()
   await page.getByRole('button', { name: 'Plain Navy' }).click()
   await expect(page.locator('.bag2d img.layer').first()).toHaveAttribute('src', /top-indigo-/)
 
   expect(glb).toEqual([])
-  await page.getByRole('button', { name: 'VEDI IN 3D' }).first().click()
+  await page.getByRole('button', { name: 'Vedi in 3D' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect.poll(() => glb.length).toBeGreaterThan(0)
 })

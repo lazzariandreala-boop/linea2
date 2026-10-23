@@ -143,10 +143,6 @@ const summary = computed(() => {
   return list.slice(0, 9)
 })
 
-const meta = computed(() => {
-  const main = findOption(WASH, state.wash[0] ?? 'indigo')
-  return `SKU L2-${bag.value.id.slice(0, 3).toUpperCase()}-${state.wash.map((w) => w.slice(0, 3).toUpperCase()).join('')}-${state.lining.slice(0, 2).toUpperCase()} · ${main.hex} · 3–4 weeks`
-})
 
 function onInitials(e: Event) {
   const el = e.target as HTMLInputElement
@@ -154,24 +150,74 @@ function onInitials(e: Event) {
   el.value = state.initials
 }
 
-// ── Tabs with scroll-spy over the inspector sections ─────────────────────
-const scroller = ref<HTMLElement | null>(null)
-const activeTab = ref<TabKey>('model')
-function goTab(key: TabKey) {
-  activeTab.value = key
-  const el = document.getElementById(`stella-g-${key}`)
-  if (el && scroller.value) scroller.value.scrollTo({ top: el.offsetTop - scroller.value.offsetTop, behavior: 'smooth' })
+// ── Steps: one group at a time, with back / next and a final summary ─────
+type StepKey = TabKey | 'summary'
+const steps = computed<{ key: StepKey; tab: string }[]>(() => [...tabs.value, { key: 'summary', tab: 'Riepilogo' }])
+const stepIndex = ref(0)
+const visited = ref(new Set<StepKey>(['model']))
+const current = computed(() => steps.value[Math.min(stepIndex.value, steps.value.length - 1)]!)
+const currentGroup = computed(() => groups.value.find((g) => g.key === current.value.key) ?? null)
+const panel = ref<HTMLElement | null>(null)
+/** Every step always holds a valid choice; this guards the one that could not. */
+const stepError = computed(() => (current.value.key === 'wash' && !state.wash.length ? 'Scegli almeno un lavaggio.' : ''))
+function goStep(i: number) {
+  if (i > stepIndex.value && stepError.value) return
+  stepIndex.value = Math.max(0, Math.min(steps.value.length - 1, i))
+  visited.value.add(current.value.key)
+  const key = current.value.key
+  // Show the lining while choosing it, the outside for everything else.
+  if (key === 'lining') view.value = 'top'
+  else if (view.value === 'top') view.value = 'front'
+  void nextTick(() => panel.value?.scrollTo({ top: 0 }))
 }
-function onScroll() {
-  const sc = scroller.value
-  if (!sc) return
-  let cur: TabKey = 'model'
-  for (const g of tabs.value) {
-    const el = document.getElementById(`stella-g-${g.key}`)
-    if (el && el.offsetTop - sc.offsetTop - 30 <= sc.scrollTop) cur = g.key
+function goTab(key: StepKey) {
+  const i = steps.value.findIndex((st) => st.key === key)
+  if (i >= 0 && i !== stepIndex.value) goStep(i)
+}
+// Switching to a bag without hardware drops that step: stay on the same group.
+watch(steps, (list, prev) => {
+  const key = prev?.[stepIndex.value]?.key
+  const i = list.findIndex((st) => st.key === key)
+  stepIndex.value = i >= 0 ? i : Math.min(stepIndex.value, list.length - 1)
+})
+
+/** Restart from the defaults of the current model. */
+function resetAll() {
+  Object.assign(state, defaultStellaState(state.model))
+  selected.value = null
+  added.value = false
+  view.value = 'front'
+  stepIndex.value = 0
+  visited.value = new Set(['model'])
+  if (route.query.cfg) void router.replace({ query: { ...route.query, cfg: undefined } })
+}
+
+/** Line-by-line price, for the summary step. */
+const breakdown = computed(() => {
+  const b = bag.value
+  const rows: { step: StepKey; label: string; value: string; p: number }[] = [
+    { step: 'model', label: 'Modello', value: `${b.name} · ${b.type}`, p: b.p },
+  ]
+  state.wash.slice(0, maxWashes(b)).forEach((id, i) => {
+    const o = findOption(WASH, id)
+    rows.push({ step: 'wash', label: i ? 'Lavaggio tracolla' : maxWashes(b) > 1 ? 'Lavaggio corpo' : 'Lavaggio', value: o.name, p: o.p })
+  })
+  const lin = findOption(LINING, state.lining)
+  rows.push({ step: 'lining', label: 'Fodera', value: lin.name, p: lin.p })
+  state.patches.forEach((pt, i) => {
+    const o = findOption(PATCH, pt.style)
+    rows.push({ step: 'patch', label: `Toppa ${i + 1}`, value: `${o.name} · ${pt.size} · ${pt.side === 'front' ? 'fronte' : 'retro'}`, p: o.p })
+  })
+  if (!state.patches.length) rows.push({ step: 'patch', label: 'Toppe', value: 'Nessuna', p: 0 })
+  if (hasHardware(b)) {
+    const o = findOption(HW, state.hw)
+    rows.push({ step: 'hw', label: 'Metalli', value: o.name, p: o.p })
   }
-  activeTab.value = cur
-}
+  const fin = findOption(FINISH, state.finish)
+  rows.push({ step: 'finish', label: 'Monogramma', value: `${fin.name} · ${state.mono.side === 'front' ? 'fronte' : 'retro'}`, p: fin.p })
+  rows.push({ step: 'finish', label: 'Iniziali', value: state.initials || 'L2 (marchio Linea 2)', p: state.initials ? STELLA_INITIALS_PRICE : 0 })
+  return rows
+})
 
 // ── 2D stage: stacked images per view, decals on top ─────────────────────
 const VIEWS: { id: BagView; name: string }[] = [
@@ -182,7 +228,6 @@ const VIEWS: { id: BagView; name: string }[] = [
 const view = ref<BagView>('front')
 const zoomed = ref(false)
 const showHint = ref(true)
-const showAr = ref(false)
 const show3d = ref(false)
 const stageEl = ref<HTMLElement | null>(null)
 
@@ -454,8 +499,6 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   if (t) Object.assign(t, at)
 }
 
-const INSTAGRAM = 'https://www.instagram.com/linea2.upcycling/'
-const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 </script>
 
 <template>
@@ -500,75 +543,75 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
         </div>
 
         <div class="vp-ui">
-          <button class="ar-pill v3d-pill" type="button" @click="show3d = true">
-            <svg viewBox="0 0 24 24"><path d="M12 3 4.5 7.3v9.4L12 21l7.5-4.3V7.3L12 3Zm0 0v9m0 0 7.5-4.7M12 12 4.5 7.3M12 12v9" /></svg>
-            <span>VEDI IN 3D</span>
+          <p class="vp-label">
+            <span class="eyebrow">Atelier Linea 2</span>
+            <span class="vp-name">{{ bag.name }}</span>
+          </p>
+          <button class="pill v3d-pill" type="button" @click="show3d = true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 7.3v9.4L12 21l7.5-4.3V7.3L12 3Zm0 0v9m0 0 7.5-4.7M12 12 4.5 7.3M12 12v9" /></svg>
+            <span>Vedi in 3D</span>
           </button>
-          <div class="vp-top">
-            <a class="icon-btn" :href="INSTAGRAM" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <svg viewBox="0 0 24 24"><path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm4.9-8.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2ZM12 3.6c2.7 0 3 0 4.1.1 2.7.1 4 1.4 4.1 4.1.1 1.1.1 1.4.1 4.1s0 3-.1 4.1c-.1 2.7-1.4 4-4.1 4.1-1.1.1-1.4.1-4.1.1s-3 0-4.1-.1c-2.7-.1-4-1.4-4.1-4.1C3.7 15 3.6 14.7 3.6 12s0-3 .1-4.1c.1-2.7 1.4-4 4.1-4.1 1.1-.2 1.5-.2 4.2-.2ZM12 2c-2.7 0-3.1 0-4.1.1C4.2 2.2 2.2 4.2 2.1 7.9 2 8.9 2 9.3 2 12s0 3.1.1 4.1c.1 3.6 2.1 5.7 5.8 5.8 1 .1 1.4.1 4.1.1s3.1 0 4.1-.1c3.6-.1 5.7-2.1 5.8-5.8.1-1 .1-1.4.1-4.1s0-3.1-.1-4.1c-.1-3.6-2.1-5.7-5.8-5.8C15.1 2 14.7 2 12 2Z" /></svg>
-            </a>
-            <a class="icon-btn" :href="TIKTOK" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-              <svg viewBox="0 0 24 24"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7l-.8-.1a5.7 5.7 0 1 0 5.7 5.7V9a7.4 7.4 0 0 0 4.3 1.4V7.3a4.3 4.3 0 0 1-3.2-1.5Z" /></svg>
-            </a>
-            <button class="ar-pill" type="button" :aria-expanded="showAr" @click="showAr = !showAr">
-              <svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3m0 8v3a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2v-3" /></svg>
-              <span>VEDI IN AR</span>
-            </button>
-          </div>
-          <div v-if="showAr" class="toast panel-glass" role="status">
-            La vista in realtà aumentata arriva presto: dal telefono potrai appoggiare la borsa sul tavolo di casa.
-          </div>
 
-          <p v-if="imgState === 'loading'" class="vp-status">Loading…</p>
-          <p v-else-if="imgState === 'error'" class="vp-status">
+          <p v-if="imgState === 'loading'" class="vp-status" role="status">Caricamento…</p>
+          <p v-else-if="imgState === 'error'" class="vp-status" role="status">
             L'immagine di questa combinazione non è ancora disponibile. Puoi comunque scegliere le opzioni e ordinare.
           </p>
 
-          <div class="summary panel-glass" aria-live="polite">
-            <h2>Riepilogo</h2>
-            <div class="sum-grid">
-              <div v-for="it in summary" :key="it.key" class="sum-item">
-                <span class="sw" :style="swatches[it.key] ? { backgroundImage: `url(${swatches[it.key]})` } : undefined" />
-                {{ it.name }}
-              </div>
-            </div>
+          <div class="views" role="group" aria-label="Vista">
+            <button v-for="v in VIEWS" :key="v.id" type="button" :aria-pressed="view === v.id" @click="view = v.id">
+              {{ v.name }}
+            </button>
           </div>
-
           <div class="vp-ctrl">
             <button type="button" aria-label="Vista precedente" @click="stepView(-1)">
-              <svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5M5 8h9" /></svg>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
             </button>
             <button type="button" :aria-label="zoomed ? 'Allontana' : 'Avvicina'" :aria-pressed="zoomed" @click="zoomed = !zoomed">
-              <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3.5 3.5M5 7h4M7 5v4" /></svg>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3.5 3.5M5 7h4" /><path v-if="!zoomed" d="M7 5v4" /></svg>
             </button>
             <button type="button" aria-label="Vista successiva" @click="stepView(1)">
-              <svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5M11 8H2" /></svg>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
             </button>
           </div>
           <span v-if="showHint && view !== 'top'" class="hint">Trascina toppe e monogramma per spostarli</span>
-          <span v-else-if="view === 'top'" class="hint">La borsa aperta, vista dall'alto: qui scegli la fodera</span>
+          <span v-else-if="view === 'top'" class="hint">La borsa aperta, vista dall'alto: qui vedi la fodera</span>
         </div>
       </section>
 
-      <aside class="inspector panel-glass" aria-label="Personalizza la borsa">
-        <h1 class="ttl">Personalizza la tua {{ bag.name }}</h1>
-        <div class="tabs" role="tablist">
-          <button
-            v-for="(g, i) in tabs"
-            :key="g.key"
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === g.key"
-            @click="goTab(g.key)"
-          >
-            {{ i + 1 }}. {{ g.tab.toUpperCase() }}
-          </button>
-        </div>
+      <aside class="inspector" aria-label="Personalizza la borsa">
+        <header class="ins-head">
+          <div>
+            <p class="eyebrow kick">Personalizza</p>
+            <h1 class="ttl">La tua {{ bag.name }}</h1>
+          </div>
+          <button type="button" class="reset" @click="resetAll">Ricomincia</button>
+        </header>
 
-        <div ref="scroller" class="scroll" @scroll.passive="onScroll">
-          <div id="stella-g-model" class="grp">
-            <h3>1. Modello</h3>
+        <nav class="steps" aria-label="Passaggi">
+          <ol>
+            <li v-for="(st, i) in steps" :key="st.key">
+              <button
+                type="button"
+                :aria-current="i === stepIndex ? 'step' : undefined"
+                :class="{ done: visited.has(st.key) && i !== stepIndex }"
+                :title="st.tab"
+                @click="goStep(i)"
+              >
+                <span class="n" aria-hidden="true">{{ visited.has(st.key) && i !== stepIndex ? '✓' : i + 1 }}</span>
+                <span class="sr-only">{{ i + 1 }}. {{ st.tab }}</span>
+              </button>
+            </li>
+          </ol>
+          <div class="bar" aria-hidden="true"><span :style="{ width: `${((stepIndex + 1) / steps.length) * 100}%` }" /></div>
+        </nav>
+
+        <div ref="panel" class="panel" :aria-labelledby="`stella-h-${current.key}`">
+          <p class="count">Passo {{ stepIndex + 1 }} di {{ steps.length }} · {{ current.tab }}</p>
+
+          <!-- 1 · Model -->
+          <template v-if="current.key === 'model'">
+            <h2 :id="`stella-h-${current.key}`" class="grp-title">Scegli il modello</h2>
+            <p class="note">Il prezzo parte dal modello; ogni scelta successiva lo aggiorna.</p>
             <div class="sws bags">
               <button
                 v-for="b in BAGS"
@@ -580,13 +623,39 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 @click="pickModel(b.id)"
               >
                 <span class="sw bag" :style="{ backgroundImage: `url(${b.thumb})` }"><i class="chk" /></span>
-                <span>{{ b.name }}<small>{{ b.type }}</small></span>
+                <span class="nm">{{ b.name }}<small>{{ b.type }} · da €{{ b.p }}</small></span>
               </button>
             </div>
-          </div>
-          <div v-for="(g, i) in groups" :id="`stella-g-${g.key}`" :key="g.key" class="grp">
-            <h3>{{ i + 2 }}. {{ g.title }}</h3>
-            <div v-if="g.key === 'patch'" class="patches">
+          </template>
+
+          <!-- Summary -->
+          <template v-else-if="current.key === 'summary'">
+            <h2 :id="`stella-h-${current.key}`" class="grp-title">Riepilogo</h2>
+            <p class="note">Controlla le tue scelte: la borsa viene cucita esattamente così.</p>
+            <dl class="recap">
+              <div v-for="(r, i) in breakdown" :key="i" class="row">
+                <dt>{{ r.label }}</dt>
+                <dd>
+                  <span>{{ r.value }}</span>
+                  <span class="rp">{{ i === 0 ? fmt(r.p) : r.p ? `+${fmt(r.p)}` : 'incluso' }}</span>
+                </dd>
+                <button type="button" class="edit" :aria-label="`Modifica ${r.label.toLowerCase()}`" @click="goTab(r.step)">Modifica</button>
+              </div>
+              <div class="row total">
+                <dt>Totale</dt>
+                <dd><span /><span class="rp">{{ fmt(price) }}</span></dd>
+              </div>
+            </dl>
+          </template>
+
+          <!-- Option groups -->
+          <template v-else-if="currentGroup">
+            <h2 :id="`stella-h-${current.key}`" class="grp-title">{{ currentGroup.title }}</h2>
+
+            <div v-if="currentGroup.key === 'patch'" class="patches">
+              <p class="note">
+                Trascina ogni toppa sulla borsa per posizionarla. Fino a {{ STELLA_MAX_PATCHES }} toppe, ognuna con il suo prezzo.
+              </p>
               <div
                 v-for="(pt, pi) in state.patches"
                 :key="pi"
@@ -594,120 +663,121 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
                 :class="{ sel: selected?.kind === 'patch' && selected.index === pi }"
                 @click="select('patch', pi)"
               >
-                <span class="pnum">{{ pi + 1 }}</span>
+                <div class="prow-head">
+                  <span class="pnum">Toppa {{ pi + 1 }}</span>
+                  <span class="pprice">+€{{ findOption(PATCH, pt.style).p }}</span>
+                  <button type="button" class="prm" :aria-label="`Rimuovi toppa ${pi + 1}`" @click.stop="removePatch(pi)">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg>
+                  </button>
+                </div>
                 <div class="pstyles" role="group" :aria-label="`Stile toppa ${pi + 1}`">
                   <button
                     v-for="o in PATCH"
                     :key="o.id"
                     type="button"
                     class="swb"
-                    :title="o.name"
                     :aria-pressed="pt.style === o.id"
                     :aria-label="ariaLabel(o)"
                     @click="pt.style = o.id"
                   >
                     <span class="sw" :style="swatches[`patch:${o.id}`] ? { backgroundImage: `url(${swatches[`patch:${o.id}`]})` } : undefined"><i class="chk" /></span>
+                    <span class="nm">{{ o.name }}</span>
                   </button>
                 </div>
-                <div class="psize" role="group" :aria-label="`Misura toppa ${pi + 1}`">
-                  <button v-for="z in SIZES" :key="z" type="button" :aria-pressed="pt.size === z" @click="pt.size = z">{{ z }}</button>
+                <div class="prow-opts">
+                  <div class="seg" role="group" :aria-label="`Misura toppa ${pi + 1}`">
+                    <button v-for="z in SIZES" :key="z" type="button" :aria-pressed="pt.size === z" @click="pt.size = z">{{ z }}</button>
+                  </div>
+                  <div class="seg" role="group" :aria-label="`Lato toppa ${pi + 1}`">
+                    <button v-for="sd in SIDES" :key="sd.id" type="button" :aria-pressed="pt.side === sd.id" @click.stop="setSide(pt, sd.id)">
+                      {{ sd.name }}
+                    </button>
+                  </div>
                 </div>
-                <div class="psize pside" role="group" :aria-label="`Lato toppa ${pi + 1}`">
-                  <button
-                    v-for="s in SIDES"
-                    :key="s.id"
-                    type="button"
-                    :title="s.name"
-                    :aria-label="s.name"
-                    :aria-pressed="pt.side === s.id"
-                    @click.stop="setSide(pt, s.id)"
-                  >
-                    {{ s.label }}
-                  </button>
-                </div>
-                <span class="pprice">+€{{ findOption(PATCH, pt.style).p }}</span>
-                <button type="button" class="prm" :aria-label="`Rimuovi toppa ${pi + 1}`" @click.stop="removePatch(pi)">×</button>
               </div>
               <button type="button" class="padd" :disabled="state.patches.length >= STELLA_MAX_PATCHES" @click="newPatch">
-                + AGGIUNGI UNA TOPPA
+                + Aggiungi una toppa
               </button>
-              <p class="note">
-                Trascina ogni toppa sulla borsa per posizionarla; F/R la mette sul fronte o sul retro (fino a {{ STELLA_MAX_PATCHES }}). Ogni toppa ha il suo prezzo.
+            </div>
+
+            <template v-else>
+              <p v-if="currentGroup.key === 'wash'" class="note">
+                {{ maxWashes(bag) > 1 ? 'Fino a due lavaggi: il primo per il corpo, il secondo per tracolla e linguetta.' : 'Un solo lavaggio per tutta la borsa.' }}
               </p>
-            </div>
-            <div v-else class="sws">
-              <button
-                v-for="o in g.list"
-                :key="o.id"
-                type="button"
-                class="swb"
-                :aria-pressed="isSelected(g.key as SimpleGroup, o.id)"
-                :aria-label="ariaLabel(o)"
-                @click="pick(g.key as SimpleGroup, o.id)"
-              >
-                <span
-                  class="sw"
-                  :style="swatches[`${g.key}:${o.id}`] ? { backgroundImage: `url(${swatches[`${g.key}:${o.id}`]})` } : undefined"
-                ><i class="chk" /></span>
-                <span>{{ o.name }}</span>
-              </button>
-            </div>
-            <p v-if="g.key === 'wash'" class="note">
-              {{ maxWashes(bag) > 1 ? 'Fino a due lavaggi: il secondo va su tracolla e linguetta.' : 'Un solo lavaggio per tutta la borsa.' }}
-            </p>
-            <p v-if="g.key === 'lining'" class="note">La borsa si apre nella vista dall’alto, così vedi la fodera all’interno.</p>
-            <template v-if="g.key === 'finish'">
-              <p class="note">Ogni borsa ha il suo monogramma: trascinalo sulla borsa per scegliere dove metterlo.</p>
-              <div class="mono-side">
-                <span>Monogramma sul</span>
-                <div class="psize pside" role="group" aria-label="Lato del monogramma">
-                  <button
-                    v-for="s in SIDES"
-                    :key="s.id"
-                    type="button"
-                    :title="s.name"
-                    :aria-pressed="state.mono.side === s.id"
-                    @click="setSide(state.mono, s.id)"
-                  >
-                    {{ s.name.toUpperCase() }}
-                  </button>
-                </div>
+              <p v-else-if="currentGroup.key === 'lining'" class="note">La borsa si apre nella vista dall’alto, così vedi la fodera all’interno.</p>
+              <p v-else-if="currentGroup.key === 'finish'" class="note">
+                Ogni borsa ha il suo monogramma: trascinalo sulla borsa per scegliere dove metterlo.
+              </p>
+              <div class="sws">
+                <button
+                  v-for="o in currentGroup.list"
+                  :key="o.id"
+                  type="button"
+                  class="swb"
+                  :aria-pressed="isSelected(currentGroup.key as SimpleGroup, o.id)"
+                  :aria-label="ariaLabel(o)"
+                  @click="pick(currentGroup.key as SimpleGroup, o.id)"
+                >
+                  <span
+                    class="sw"
+                    :style="swatches[`${currentGroup.key}:${o.id}`] ? { backgroundImage: `url(${swatches[`${currentGroup.key}:${o.id}`]})` } : undefined"
+                  ><i class="chk" /></span>
+                  <span class="nm">{{ o.name }}<small v-if="o.p">+€{{ o.p }}</small></span>
+                </button>
               </div>
-              <label class="ini" for="stella-initials">
-                Iniziali
-                <input
-                  id="stella-initials"
-                  type="text"
-                  maxlength="3"
-                  placeholder="L2"
-                  autocomplete="off"
-                  :value="state.initials"
-                  @input="onInitials"
-                />
-                <span v-if="state.initials" class="plus">+€{{ STELLA_INITIALS_PRICE }}</span>
-              </label>
-              <p class="meta">{{ meta }}</p>
+              <template v-if="currentGroup.key === 'finish'">
+                <div class="field-row">
+                  <span>Posizione</span>
+                  <div class="seg" role="group" aria-label="Lato del monogramma">
+                    <button v-for="sd in SIDES" :key="sd.id" type="button" :aria-pressed="state.mono.side === sd.id" @click="setSide(state.mono, sd.id)">
+                      {{ sd.name }}
+                    </button>
+                  </div>
+                </div>
+                <label class="field-row" for="stella-initials">
+                  <span>Iniziali <small>(fino a 3, facoltative)</small></span>
+                  <span class="ini">
+                    <input
+                      id="stella-initials"
+                      type="text"
+                      maxlength="3"
+                      placeholder="L2"
+                      autocomplete="off"
+                      :value="state.initials"
+                      @input="onInitials"
+                    />
+                    <span class="plus">{{ state.initials ? `+€${STELLA_INITIALS_PRICE}` : `+€${STELLA_INITIALS_PRICE} se aggiunte` }}</span>
+                  </span>
+                </label>
+              </template>
             </template>
-          </div>
+          </template>
+          <p v-if="stepError" class="err" role="alert">{{ stepError }}</p>
         </div>
 
-        <div class="buy">
-          <div class="price-row">
-            <span class="price" aria-live="polite">{{ fmt(price) }}</span>
-            <button type="button" class="link" @click="show3d = true">VEDI IN 3D</button>
+        <footer class="buy">
+          <div class="live" aria-label="Le tue scelte">
+            <span
+              v-for="it in summary"
+              :key="it.key"
+              class="sw mini"
+              :title="it.name"
+              :style="swatches[it.key] ? { backgroundImage: `url(${swatches[it.key]})` } : undefined"
+            />
           </div>
-          <button type="button" class="add" @click="addToBag">AGGIUNGI AL CARRELLO</button>
+          <div class="nav">
+            <button type="button" class="ghost" :disabled="stepIndex === 0" @click="goStep(stepIndex - 1)">← Indietro</button>
+            <span class="price" aria-live="polite">{{ fmt(price) }}</span>
+            <button v-if="stepIndex < steps.length - 1" type="button" class="next" :disabled="!!stepError" @click="goStep(stepIndex + 1)">
+              Avanti →
+            </button>
+          </div>
+          <button type="button" class="add" :class="{ final: current.key === 'summary' }" @click="addToBag">Aggiungi al carrello</button>
           <p v-if="added" class="added" role="status">
             Aggiunta al carrello · <NuxtLink to="/cart" class="underline">vedi carrello</NuxtLink>
           </p>
-        </div>
+        </footer>
       </aside>
-    </div>
-
-    <div class="views" role="group" aria-label="Vista">
-      <button v-for="v in VIEWS" :key="v.id" type="button" :aria-pressed="view === v.id" @click="view = v.id">
-        {{ v.name }}
-      </button>
     </div>
 
     <LazyBag3DViewer v-if="show3d" :state="state" @close="show3d = false" @place="onPlace3d" />
@@ -716,26 +786,29 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 
 <style scoped>
 .stella {
-  --line: rgb(20 40 58 / 0.14);
+  --line: var(--color-line);
   color: var(--color-fg);
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.4;
 }
 .stage {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 350px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 24px;
+  align-items: start;
 }
 .viewport {
-  position: relative;
-  height: 610px;
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
+  height: min(680px, calc(100svh - var(--header-h) - 40px));
+  min-height: 520px;
   border-radius: var(--radius-card);
   overflow: hidden;
   /* Studio: lit ivory wall over a linen table, light from the left. */
   background:
-    radial-gradient(80% 70% at 18% 8%, rgb(255 250 240 / 0.7), transparent 60%),
-    linear-gradient(180deg, #e9e1d2 0%, #f1ebe0 68%, #e2d8c7 68.4%, #d6cab6 100%);
+    radial-gradient(70% 60% at 30% 20%, rgb(255 252 246 / 0.75), transparent 65%),
+    linear-gradient(180deg, #ece5d8 0%, #f2ede4 70%, #e3d9c8 70.3%, #d9cdb9 100%);
 }
 .bag-wrap {
   position: absolute;
@@ -743,18 +816,18 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   z-index: 1;
   display: grid;
   place-items: center;
-  padding: 44px 190px 44px 20px;
+  padding: 70px 24px 76px;
 }
 .bag2d {
   position: relative;
   height: 100%;
   max-width: 100%;
   aspect-ratio: 1;
-  filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.35));
+  filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.3));
 }
 @media (prefers-reduced-motion: no-preference) {
   .bag2d {
-    transition: transform 250ms ease-out;
+    transition: transform 300ms var(--ease-out-soft);
   }
 }
 .bag-wrap.zoomed .bag2d {
@@ -789,7 +862,7 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 }
 .decal.sel,
 .decal:focus-visible {
-  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)) drop-shadow(0 0 2px var(--color-brass-hi)) drop-shadow(0 0 2px var(--color-brass-hi));
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px var(--color-navy));
 }
 .vp-ui {
   position: absolute;
@@ -800,6 +873,21 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
 .vp-ui > * {
   pointer-events: auto;
 }
+.vp-label {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  display: grid;
+  gap: 4px;
+  pointer-events: none !important;
+  color: var(--color-ink);
+}
+.vp-label .eyebrow {
+  color: var(--color-muted);
+}
+.vp-name {
+  font: 400 26px/1 var(--font-display);
+}
 .vp-status {
   position: absolute;
   left: 50%;
@@ -808,224 +896,246 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   max-width: 320px;
   text-align: center;
   padding: 10px 14px;
-  border-radius: 10px;
-  background: rgb(20 40 58 / 0.6);
+  border-radius: var(--radius-sm);
+  background: rgb(20 38 56 / 0.7);
   color: #fff;
   font-size: 12px;
   pointer-events: none;
 }
-.icon-btn,
-.ar-pill,
-.vp-ctrl button {
-  background: rgb(20 40 58 / 0.82);
-  border: 0;
-  cursor: pointer;
-  color: #fff;
-}
-.icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-}
-.icon-btn svg {
-  width: 17px;
-  height: 17px;
-  fill: #fff;
-}
-.v3d-pill {
+.pill {
   position: absolute;
   top: 18px;
-  left: 20px;
-}
-.mono-side {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--color-muted);
-}
-.prow > .psize {
-  grid-row: 2;
-  grid-column: 2;
-  justify-self: start;
-}
-.prow > .pside {
-  grid-row: 2;
-  grid-column: 3 / 5;
-  justify-self: end;
-}
-.psize.pside button {
-  width: auto;
-  min-width: 22px;
-  padding: 0 6px;
-}
-.vp-top {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  display: flex;
+  right: 18px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
   gap: 8px;
   align-items: center;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--color-navy);
+  background: var(--color-navy);
+  color: var(--color-ivory);
+  font: 600 11px/1 var(--font-body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
-.ar-pill {
-  height: 34px;
-  border-radius: 17px;
-  display: inline-flex;
-  gap: 9px;
-  align-items: center;
-  padding: 0 16px 0 12px;
-  font: 500 11.5px/1 var(--font-body);
-  letter-spacing: 0.06em;
+.pill:hover {
+  background: var(--color-indigo);
 }
-.ar-pill svg {
-  width: 18px;
-  height: 18px;
+.pill svg {
+  width: 17px;
+  height: 17px;
   fill: none;
-  stroke: #fff;
-  stroke-width: 1.4;
+  stroke: currentColor;
+  stroke-width: 1.3;
+}
+.views {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  border: 1px solid rgb(20 38 56 / 0.2);
+  border-radius: var(--radius-sm);
+  background: rgb(252 250 246 / 0.85);
+  overflow: hidden;
+}
+.views button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: 500 11px/1 var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.views button + button {
+  border-left: 1px solid rgb(20 38 56 / 0.12);
+}
+.views button[aria-pressed='true'] {
+  background: var(--color-navy);
+  color: var(--color-ivory);
 }
 .vp-ctrl {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 18px;
+  bottom: 18px;
   display: flex;
   gap: 6px;
 }
 .vp-ctrl button {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgb(20 38 56 / 0.2);
+  background: rgb(252 250 246 / 0.85);
+  color: var(--color-navy);
   display: grid;
   place-items: center;
+  cursor: pointer;
 }
 .vp-ctrl svg {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   fill: none;
-  stroke: #fff;
-  stroke-width: 1.6;
+  stroke: currentColor;
+  stroke-width: 1.4;
 }
 .vp-ctrl button[aria-pressed='true'] {
-  background: var(--color-selvedge);
-  box-shadow: 0 0 0 1px var(--color-brass);
-}
-.summary {
-  position: absolute;
-  right: 8px;
-  bottom: 48px;
-  width: 170px;
-  border-radius: 10px;
-  padding: 12px 12px 10px;
-}
-.summary h2 {
-  margin: 0 0 8px;
-  font: 400 14.5px/1.2 var(--font-body);
-  text-transform: none;
-  color: var(--color-fg);
-}
-.sum-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px 6px;
-}
-.sum-item {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
-  font: 400 8.5px/1.15 var(--font-body);
-  color: color-mix(in oklab, var(--color-fg) 82%, transparent);
-  letter-spacing: 0.02em;
-}
-.sum-item .sw {
-  width: 34px;
-  height: 34px;
-}
-.toast {
-  position: absolute;
-  top: 62px;
-  right: 20px;
-  max-width: 280px;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
+  background: var(--color-navy);
+  color: var(--color-ivory);
 }
 .hint {
   position: absolute;
   left: 50%;
-  bottom: 12px;
+  bottom: 66px;
   transform: translateX(-50%);
-  font: 400 10.5px/1 var(--font-body);
+  font: 400 11px/1.3 var(--font-body);
   letter-spacing: 0.04em;
-  color: rgb(244 240 231 / 0.9);
-  background: rgb(20 40 58 / 0.5);
-  padding: 6px 10px;
-  border-radius: 99px;
+  color: var(--color-ivory);
+  background: rgb(20 38 56 / 0.6);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
   pointer-events: none !important;
 }
 
 /* inspector */
 .inspector {
-  border-radius: var(--radius-panel);
-  padding: 20px 22px 22px;
   display: flex;
   flex-direction: column;
-  height: 610px;
   min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
 }
-.ttl {
-  margin: 0;
-  text-align: center;
-  font: 400 21px/1.2 var(--font-display);
-  letter-spacing: 0.06em;
-}
-.tabs {
+.ins-head {
   display: flex;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 11px;
-  border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  scrollbar-width: none;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px 24px 16px;
 }
-.tabs button {
-  background: none;
+.kick {
+  color: var(--color-accent);
+}
+.ttl {
+  margin: 6px 0 0;
+  font: 400 28px/1.1 var(--font-display);
+  color: var(--color-ink);
+}
+.reset {
+  min-height: 36px;
+  padding: 0 2px;
   border: 0;
-  padding: 4px 0 7px;
-  font: 500 8.5px/1 var(--font-body);
-  letter-spacing: 0.03em;
+  background: none;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.reset:hover {
+  color: var(--color-ink);
+}
+.steps {
+  padding: 0 24px;
+}
+.steps ol {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+.steps ol::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 22px;
+  height: 1px;
+  background: var(--line);
+}
+.steps li {
+  position: relative;
+}
+.steps button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  margin: 0 -6px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--color-muted);
   cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 1.5px solid transparent;
-  margin-bottom: -1px;
 }
-.tabs button[aria-selected='true'] {
-  color: var(--color-fg);
-  border-bottom-color: var(--color-fg);
+.steps .n {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--color-surface);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
-.scroll {
+.steps button:hover .n {
+  border-color: var(--color-ink);
+}
+.steps button.done .n {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+.steps button[aria-current='step'] .n {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--color-ivory);
+}
+.bar {
+  height: 1px;
+  background: var(--line);
+}
+.bar span {
+  display: block;
+  height: 1px;
+  background: var(--color-ink);
+  transition: width 0.35s var(--ease-out-soft);
+}
+.panel {
   flex: 1;
+  padding: 20px 24px 8px;
+  min-height: 300px;
+  max-height: 440px;
   overflow-y: auto;
-  padding-top: 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgb(20 40 58 / 0.2) transparent;
 }
-.grp {
-  padding-bottom: 6px;
+.count {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
-.grp h3 {
-  margin: 6px 0 9px;
-  font: 500 13px/1.25 var(--font-body);
-  letter-spacing: 0.02em;
+.grp-title {
+  margin: 8px 0 0;
+  font: 400 22px/1.2 var(--font-display);
+  color: var(--color-ink);
+}
+.note {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--color-muted);
 }
 .sws {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 10px;
 }
 .swb {
   background: none;
@@ -1034,323 +1144,441 @@ const TIKTOK = 'https://www.tiktok.com/@linea2.upcycling'
   display: grid;
   justify-items: center;
   align-content: start;
-  gap: 5px;
+  gap: 8px;
   cursor: pointer;
   text-align: center;
-  font: 400 11px/1.15 var(--font-body);
-  color: color-mix(in oklab, var(--color-fg) 90%, transparent);
+  color: var(--color-fg);
+}
+.nm {
+  font: 400 12px/1.25 var(--font-body);
+}
+.nm small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--color-muted);
 }
 .sw {
   position: relative;
   display: block;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 1px solid rgb(20 40 58 / 0.18);
+  width: 100%;
+  max-width: 64px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
   background-color: var(--color-surface-2);
   background-size: cover;
   background-position: center;
 }
 @media (prefers-reduced-motion: no-preference) {
   .swb .sw {
-    transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+    transition: box-shadow 160ms ease-out, transform 160ms ease-out;
   }
 }
 .swb:hover .sw {
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 .swb[aria-pressed='true'] .sw {
-  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-brass-hi);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px var(--color-ink);
   border-color: transparent;
 }
-.swb[aria-pressed='true'] {
-  color: var(--color-brass-hi);
+.swb[aria-pressed='true'] .nm {
+  font-weight: 600;
+  color: var(--color-ink);
 }
 .chk {
   position: absolute;
-  top: 6px;
-  right: 4px;
-  width: 14px;
-  height: 14px;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--color-brass-hi);
+  background: var(--color-navy);
   display: none;
   place-items: center;
 }
 .chk::after {
   content: '';
-  width: 6px;
-  height: 3px;
-  border-left: 1.5px solid #1b1b1b;
-  border-bottom: 1.5px solid #1b1b1b;
+  width: 7px;
+  height: 3.5px;
+  border-left: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
   transform: rotate(-45deg) translate(0.5px, -0.5px);
 }
 .swb[aria-pressed='true'] .chk {
   display: grid;
 }
 .sws.bags {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 10px;
 }
 .sw.bag {
+  max-width: 96px;
+  aspect-ratio: 5 / 6;
   background-color: #ebe3d4;
-  background-size: cover;
-}
-.swb small {
-  display: block;
-  margin-top: 2px;
-  font-size: 9.5px;
-  color: var(--color-muted);
 }
 .patches {
   display: grid;
-  gap: 6px;
+  gap: 10px;
+}
+.patches .note {
+  margin-bottom: 6px;
 }
 .prow {
   display: grid;
-  grid-template-columns: 16px 1fr auto 20px;
-  row-gap: 6px;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 12px;
+  padding: 12px 14px 14px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .prow.sel {
-  border-color: var(--color-brass-hi);
+  border-color: var(--color-ink);
+}
+.prow-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .pnum {
-  font: 500 11px/1 var(--font-mono);
-  color: var(--color-muted);
-}
-.pstyles {
-  display: flex;
-  gap: 6px;
-}
-.pstyles .sw {
-  width: 34px;
-  height: 34px;
-}
-.pstyles .chk {
-  top: 0;
-  right: -2px;
-}
-.psize {
-  display: flex;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.psize button {
-  width: 22px;
-  height: 22px;
-  border: 0;
-  background: none;
-  color: var(--color-muted);
-  font: 500 10px/1 var(--font-mono);
-  cursor: pointer;
-}
-.psize button[aria-pressed='true'] {
-  background: var(--color-brass-hi);
-  color: #1b1b1b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink);
 }
 .pprice {
-  font: 400 10.5px/1 var(--font-mono);
-  color: var(--color-brass-hi);
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
 }
 .prm {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px -6px 0;
   border: 0;
-  border-radius: 50%;
   background: none;
   color: var(--color-muted);
-  font-size: 16px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   cursor: pointer;
 }
+.prm svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
 .prm:hover {
-  color: var(--color-fg);
+  color: var(--color-ink);
+}
+.pstyles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.pstyles .sw {
+  max-width: 48px;
+}
+.prow-opts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.seg button {
+  min-width: 36px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: 500 11.5px/1 var(--font-body);
+  cursor: pointer;
+}
+.seg button + button {
+  border-left: 1px solid var(--line);
+}
+.seg button[aria-pressed='true'] {
+  background: var(--color-navy);
+  color: var(--color-ivory);
 }
 .padd {
-  height: 34px;
-  border-radius: 17px;
-  border: 1px dashed var(--color-brass-hi);
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-ink);
   background: none;
-  color: var(--color-brass-hi);
-  font: 500 11px/1 var(--font-body);
-  letter-spacing: 0.06em;
+  color: var(--color-ink);
+  font: 500 12px/1 var(--font-body);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 .padd:disabled {
   opacity: 0.4;
   cursor: default;
 }
-.note {
-  margin-top: 6px;
-  font-size: 10.5px;
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.field-row small {
   color: var(--color-muted);
 }
 .ini {
   display: flex;
-  gap: 10px;
   align-items: center;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--color-muted);
+  gap: 10px;
 }
 .ini input {
-  width: 86px;
-  padding: 7px 10px;
-  border-radius: 8px;
+  width: 96px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgb(0 0 0 / 0.25);
-  color: var(--color-fg);
-  font: 400 12px var(--font-mono);
-  letter-spacing: 0.12em;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: 500 14px var(--font-body);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
+.ini input:focus {
+  outline: none;
+  border-color: var(--color-ink);
+}
 .plus {
-  color: var(--color-brass-hi);
-  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-accent);
 }
-.meta {
-  font: 400 10.5px/1.35 var(--font-mono);
-  color: var(--color-muted);
-  margin-top: 8px;
-  letter-spacing: -0.02em;
-}
-.buy {
+.recap {
+  margin: 0;
   border-top: 1px solid var(--line);
-  padding-top: 14px;
-  margin-top: 8px;
-  display: grid;
-  gap: 14px;
 }
-.price-row {
+.recap .row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.recap dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.recap dd {
+  margin: 0;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  gap: 10px;
+  color: var(--color-ink);
 }
-.price {
-  font: 400 20px/1 var(--font-body);
+.rp {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-.link {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: 400 11px/1 var(--font-body);
-  letter-spacing: 0.06em;
   color: var(--color-muted);
+}
+.edit {
+  min-height: 28px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--color-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
 }
-.add {
-  height: 48px;
-  border-radius: 8px;
-  border: 0;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font: 700 12.5px/1 var(--font-body);
-  letter-spacing: 0.14em;
-  cursor: pointer;
+.recap .total {
+  grid-template-columns: 6.5rem 1fr;
+  border-bottom: 0;
 }
-.add:hover {
-  background: var(--color-primary-strong);
+.recap .total dt,
+.recap .total .rp {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 14px;
 }
-.added {
-  font-size: 11px;
-  color: var(--color-muted);
-  text-align: center;
-  margin-top: -6px;
+.err {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #9b3b2f;
 }
-.views {
+.buy {
+  display: grid;
+  gap: 12px;
+  padding: 16px 24px 22px;
+  border-top: 1px solid var(--line);
+  background: var(--color-surface);
+  border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+}
+.live {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding-top: 16px;
-  width: calc(100% - 368px);
+  flex-wrap: wrap;
+  gap: 5px;
 }
-.views button {
-  height: 30px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: none;
-  color: var(--color-muted);
-  font: 500 11px/1 var(--font-body);
+.sw.mini {
+  width: 22px;
+  border-radius: 2px;
+}
+.nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.nav .ghost,
+.nav .next {
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font: 500 12px/1 var(--font-body);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
 }
-.views button[aria-pressed='true'] {
-  color: var(--color-fg);
-  border-color: var(--color-fg);
-  background: var(--color-surface);
+.nav .ghost {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+}
+.nav .ghost:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nav .next {
+  justify-self: end;
+  padding: 0 16px;
+  border: 1px solid var(--color-ink);
+  background: none;
+  color: var(--color-ink);
+}
+.nav .next:hover {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+.price {
+  font: 400 24px/1 var(--font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-ink);
+}
+.add {
+  min-height: 52px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-navy);
+  background: var(--color-navy);
+  color: var(--color-ivory);
+  font: 600 12px/1 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.add:hover {
+  background: var(--color-indigo);
+}
+.added {
+  font-size: 12px;
+  color: var(--color-muted);
+  text-align: center;
 }
 
-.ini input {
-  background: var(--color-bg);
-}
-
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .stage {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-  .views {
-    width: calc(100% - 338px);
+    grid-template-columns: minmax(0, 1fr) 360px;
   }
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .stage {
     grid-template-columns: 1fr;
   }
   .viewport {
-    height: 460px;
+    position: relative;
+    top: 0;
+    height: 62svh;
+    min-height: 380px;
+    max-height: 560px;
   }
-  .inspector {
-    height: auto;
+  .panel {
+    max-height: none;
+    min-height: 0;
   }
-  .scroll {
-    overflow: visible;
-  }
-  .views {
-    width: 100%;
-  }
-  .bag-wrap {
-    padding: 50px 16px 44px;
+  .buy {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    box-shadow: 0 -10px 24px -18px rgb(20 38 56 / 0.35);
   }
 }
 @media (max-width: 520px) {
-  .viewport {
-    height: 400px;
+  .bag-wrap {
+    padding: 64px 4px 70px;
   }
-  .summary {
+  .vp-label {
+    top: 14px;
+    left: 14px;
+  }
+  .vp-name {
+    font-size: 21px;
+  }
+  .pill {
+    top: 12px;
+    right: 12px;
+  }
+  .views {
+    left: 12px;
+    bottom: 12px;
+  }
+  .views button {
+    padding: 0 10px;
+  }
+  .vp-ctrl {
+    right: 12px;
+    bottom: 12px;
+  }
+  .vp-ctrl button:not([aria-pressed]) {
     display: none;
   }
-  .bag-wrap {
-    padding: 56px 8px 40px;
-  }
   .hint {
-    bottom: 50px;
+    bottom: 60px;
+    white-space: normal;
+    width: max-content;
     max-width: calc(100% - 24px);
     text-align: center;
   }
-  .ar-pill span {
-    display: none;
+  .ins-head,
+  .steps,
+  .panel,
+  .buy {
+    padding-left: 16px;
+    padding-right: 16px;
   }
-  .ar-pill {
-    padding: 0 9px;
+  .sws {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px 8px;
   }
-  .sw {
-    width: 48px;
-    height: 48px;
+  .recap .row {
+    grid-template-columns: 1fr auto;
   }
-  .inspector {
-    padding: 18px 14px;
+  .recap dd {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 </style>

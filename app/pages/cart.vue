@@ -73,86 +73,90 @@ function onPaymentError() {
 </script>
 
 <template>
-  <section class="site-container py-8 sm:py-12">
-    <h1 class="text-display text-fg">{{ t((m) => m.cart.title) }}</h1>
-    <p v-if="!isEmpty" class="mt-1 text-fg/60">{{ count }} {{ t((m) => m.cart.itemsCount) }}</p>
+  <section class="site-container pb-20 pt-12 sm:pt-16">
+    <div class="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-8">
+      <h1 class="text-hero">{{ t((m) => m.cart.title) }}</h1>
+      <p v-if="!isEmpty && !placed" class="meta">{{ count }} {{ count === 1 ? 'articolo' : t((m) => m.cart.itemsCount) }}</p>
+    </div>
 
     <!-- Order confirmation -->
-    <div v-if="placed" class="mt-8 rounded-card glass-accent p-6 text-fg">
-      <p class="text-lg font-semibold">{{ t((m) => m.cart.orderPlaced) }}</p>
-      <NuxtLink to="/account" class="mt-3 inline-block font-medium text-accent underline">
-        {{ t((m) => m.account.orders) }}
-      </NuxtLink>
+    <div v-if="placed" class="mt-10 max-w-xl border border-brass p-8" role="status">
+      <p class="font-display text-2xl text-ink">{{ t((m) => m.cart.orderPlaced) }}</p>
+      <NuxtLink to="/account" class="arrow-link mt-6">{{ t((m) => m.account.orders) }}</NuxtLink>
     </div>
 
     <!-- Empty -->
-    <div v-else-if="isEmpty" class="mt-10 flex flex-col items-start gap-4">
-      <p class="text-lead text-fg/70">{{ t((m) => m.cart.empty) }}</p>
-      <UiBaseButton to="/accessories">{{ t((m) => m.cart.emptyCta) }}</UiBaseButton>
+    <div v-else-if="isEmpty" class="grid gap-10 py-14 md:grid-cols-2 md:items-center">
+      <div>
+        <p class="font-display text-3xl text-ink">{{ t((m) => m.cart.empty) }}</p>
+        <p class="mt-3 max-w-sm text-muted">Componi una borsa su misura nel configuratore, oppure guarda i pezzi già pronti.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <UiBaseButton to="/customize" size="lg">Personalizza la tua borsa</UiBaseButton>
+          <UiBaseButton to="/shop" variant="outline" size="lg">{{ t((m) => m.cart.emptyCta) }}</UiBaseButton>
+        </div>
+      </div>
+      <div class="media hidden aspect-[3/2] md:block">
+        <img :src="EDITORIAL.patchwork.src" alt="" :width="EDITORIAL.patchwork.width" :height="EDITORIAL.patchwork.height" loading="lazy" />
+      </div>
     </div>
 
     <!-- Cart -->
-    <div v-else class="mt-8 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+    <div v-else class="mt-2 grid gap-10 lg:grid-cols-12 lg:gap-12">
       <!-- Items -->
-      <ul class="flex flex-col gap-4">
-        <li
-          v-for="item in items"
-          :key="item.id"
-          class="flex gap-4 rounded-card bg-surface p-3 raised"
-        >
-          <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="shrink-0 overflow-hidden rounded-2xl bg-surface-2">
+      <ul class="lg:col-span-7">
+        <li v-for="item in items" :key="item.id" class="grid grid-cols-[6rem_1fr] gap-5 border-b border-line py-7 sm:grid-cols-[8.5rem_1fr]">
+          <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="media aspect-square self-start">
             <img
               v-if="item.image"
               :src="item.image"
               :alt="item.imageAlt ?? item.title"
-              class="h-24 w-24 object-cover"
-              width="96"
-              height="96"
+              width="136"
+              height="136"
             />
-            <div v-else class="h-24 w-24" />
           </NuxtLink>
 
-          <div class="flex min-w-0 flex-1 flex-col">
-            <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="font-display font-bold text-fg hover:text-accent">
-              {{ item.title }}
-            </NuxtLink>
-            <p v-if="item.details" class="mt-0.5 font-mono text-[11px] leading-snug text-fg/55">{{ item.details }}</p>
-            <p class="mt-0.5 text-sm text-fg/60">{{ fmt(item.price) }}</p>
+          <div class="flex min-w-0 flex-col">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <NuxtLink :to="item.link ?? `/products/${item.slug}`" class="font-display text-xl leading-snug text-ink hover:underline hover:underline-offset-4">
+                  {{ item.title }}
+                </NuxtLink>
+                <p class="price-tag mt-1 text-sm text-muted">{{ fmt(item.price) }}<span v-if="item.details"> · su misura</span></p>
+              </div>
+              <span class="price-tag shrink-0 text-ink">{{ fmt(item.price * item.quantity) }}</span>
+            </div>
 
-            <div class="mt-auto flex items-center justify-between gap-3 pt-2">
+            <ul v-if="item.details" class="mt-3 grid gap-0.5 text-xs leading-relaxed text-muted" aria-label="Configurazione">
+              <li v-for="d in item.details.split(' · ')" :key="d">{{ d }}</li>
+            </ul>
+
+            <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
               <!-- Quantity stepper -->
-              <div class="inline-flex items-center rounded-pill bg-surface-2 raised">
+              <div class="inline-flex items-center border border-line" role="group" :aria-label="`${t((m) => m.cart.quantity)}: ${item.title}`">
                 <button
                   type="button"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-full text-fg/70 transition-colors hover:text-fg disabled:opacity-40"
+                  class="inline-flex h-10 w-10 items-center justify-center text-ink transition-colors hover:bg-surface-2 disabled:opacity-35"
                   :disabled="item.quantity <= 1"
-                  :aria-label="t((m) => m.cart.quantity)"
+                  aria-label="Diminuisci la quantità"
                   @click="setQuantity(item.id, item.quantity - 1)"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14" /></svg>
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14" /></svg>
                 </button>
-                <span class="min-w-8 text-center text-sm font-semibold tabular-nums text-fg">{{ item.quantity }}</span>
+                <span class="min-w-8 text-center text-sm tabular-nums text-ink" aria-live="polite">{{ item.quantity }}</span>
                 <button
                   type="button"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-full text-fg/70 transition-colors hover:text-fg"
-                  :aria-label="t((m) => m.cart.quantity)"
+                  class="inline-flex h-10 w-10 items-center justify-center text-ink transition-colors hover:bg-surface-2"
+                  aria-label="Aumenta la quantità"
                   @click="setQuantity(item.id, item.quantity + 1)"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                 </button>
               </div>
 
-              <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold text-fg">{{ fmt(item.price * item.quantity) }}</span>
-                <button
-                  type="button"
-                  class="text-fg/40 transition-colors hover:text-accent-2"
-                  :aria-label="t((m) => m.cart.remove)"
-                  @click="remove(item.id)"
-                >
-                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                  </svg>
+              <div class="flex items-center gap-5 text-sm">
+                <NuxtLink v-if="item.details && item.link" :to="item.link" class="text-ink underline underline-offset-4">Modifica</NuxtLink>
+                <button type="button" class="text-muted underline underline-offset-4 hover:text-ink" @click="remove(item.id)">
+                  {{ t((m) => m.cart.remove) }}
                 </button>
               </div>
             </div>
@@ -161,36 +165,43 @@ function onPaymentError() {
       </ul>
 
       <!-- Summary + shipping + checkout -->
-      <aside class="flex h-fit flex-col gap-5 rounded-card bg-surface p-5 shadow-card lg:sticky lg:top-20">
-        <div class="flex items-baseline justify-between">
-          <span class="text-fg/70">{{ t((m) => m.cart.subtotal) }}</span>
-          <span class="text-2xl font-bold text-fg">{{ fmt(subtotal) }}</span>
-        </div>
+      <aside class="h-fit border border-line bg-surface p-6 sm:p-8 lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:col-span-5" aria-labelledby="summary-title">
+        <h2 id="summary-title" class="font-display text-2xl text-ink">Riepilogo ordine</h2>
+        <dl class="mt-6 grid gap-3 border-t border-line pt-5 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-muted">{{ t((m) => m.cart.subtotal) }}</dt>
+            <dd class="price-tag text-ink">{{ fmt(subtotal) }}</dd>
+          </div>
+          <div class="flex items-baseline justify-between border-t border-line pt-4">
+            <dt class="font-medium text-ink">{{ t((m) => m.cart.total) }}</dt>
+            <dd class="price-tag font-display text-3xl text-ink">{{ fmt(subtotal) }}</dd>
+          </div>
+        </dl>
 
         <!-- Not logged in -->
-        <div v-if="!isLoggedIn" class="rounded-2xl bg-surface-2 p-4">
-          <p class="text-sm text-fg/70">{{ t((m) => m.cart.loginToCheckout) }}</p>
-          <UiBaseButton block class="mt-3" @click="authModal.open()">
+        <div v-if="!isLoggedIn" class="mt-6 border-t border-line pt-6">
+          <p class="text-sm text-muted">{{ t((m) => m.cart.loginToCheckout) }}</p>
+          <UiBaseButton block size="lg" class="mt-4" @click="authModal.open()">
             {{ t((m) => m.nav.signIn) }}
           </UiBaseButton>
         </div>
 
         <!-- Logged in: shipping -->
-        <div v-else class="border-t border-fg/10 pt-4">
+        <div v-else class="mt-6 border-t border-line pt-6">
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-fg">{{ t((m) => m.cart.shippingTo) }}</h2>
+            <h3 class="text-sm font-medium text-ink">{{ t((m) => m.cart.shippingTo) }}</h3>
             <button
               v-if="!editingShipping"
               type="button"
-              class="text-sm font-medium text-accent hover:underline"
+              class="text-sm text-ink underline underline-offset-4"
               @click="editingShipping = true"
             >
               {{ t((m) => m.cart.editShipping) }}
             </button>
           </div>
 
-          <div v-if="!editingShipping && shippingComplete" class="mt-2 text-sm leading-relaxed text-fg/70">
-            <p class="font-medium text-fg">{{ profile.shipping.fullName }}</p>
+          <div v-if="!editingShipping && shippingComplete" class="mt-3 text-sm leading-relaxed text-muted">
+            <p class="text-ink">{{ profile.shipping.fullName }}</p>
             <p>{{ profile.shipping.line1 }}<span v-if="profile.shipping.line2">, {{ profile.shipping.line2 }}</span></p>
             <p>{{ profile.shipping.postalCode }} {{ profile.shipping.city }} {{ profile.shipping.province }}</p>
             <p>{{ profile.shipping.country }}</p>
@@ -203,29 +214,30 @@ function onPaymentError() {
               block
               class="mt-4"
               :aria-busy="savingShipping"
+              :disabled="savingShipping"
               @click="onSaveShipping"
             >
               {{ savingShipping ? t((m) => m.account.saving) : t((m) => m.cart.saveShipping) }}
             </UiBaseButton>
           </div>
 
-          <p v-if="!shippingComplete && !editingShipping" class="mt-2 text-sm text-accent-2">
+          <p v-if="!shippingComplete && !editingShipping" class="form-error mt-2 text-sm">
             {{ t((m) => m.cart.completeShipping) }}
           </p>
         </div>
 
         <!-- Checkout -->
-        <div v-if="isLoggedIn && !editingShipping" class="border-t border-fg/10 pt-4">
-          <p v-if="!paypalConfigured" class="text-sm text-fg/60">
+        <div v-if="isLoggedIn && !editingShipping" class="mt-6 border-t border-line pt-6">
+          <p v-if="!paypalConfigured" class="text-sm text-muted">
             {{ t((m) => m.cart.paypalUnavailable) }}
           </p>
           <template v-else-if="canCheckout">
             <ClientOnly>
               <PayPalButtons :amount="subtotal" @paid="onPaid" @error="onPaymentError" />
             </ClientOnly>
-            <p v-if="paymentError" class="mt-2 text-sm text-accent-2" role="alert">{{ paymentError }}</p>
+            <p v-if="paymentError" class="form-error mt-2 text-sm" role="alert">{{ paymentError }}</p>
           </template>
-          <p v-else class="text-sm text-accent-2">{{ t((m) => m.cart.completeShipping) }}</p>
+          <p v-else class="form-error text-sm">{{ t((m) => m.cart.completeShipping) }}</p>
         </div>
       </aside>
     </div>

@@ -6,16 +6,16 @@ withDefaults(
 
 const TONES: Record<string, string> = {
   primary: 'bg-primary text-on-primary',
-  accent: 'bg-ivory text-denim',
-  gold: 'bg-gold text-on-primary',
-  neutral: 'bg-fg/8 text-fg',
-  outline: 'border border-fg/25 text-fg',
+  accent: 'bg-paper/95 text-navy',
+  gold: 'border border-brass text-accent',
+  neutral: 'border border-line text-muted',
+  outline: 'border border-line text-fg',
 }
 </script>
 
 <template>
   <span
-    class="eyebrow inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[0.7rem]"
+    class="eyebrow inline-flex items-center gap-1 rounded-xs px-2.5 py-1 text-[0.65rem]"
     :class="TONES[tone]"
   >
     <slot />

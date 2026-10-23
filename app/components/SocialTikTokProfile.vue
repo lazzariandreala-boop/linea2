@@ -14,23 +14,24 @@ const profileUrl = computed(() => `https://www.tiktok.com/@${props.handle}`)
 <template>
   <div
     v-if="!loaded"
-    class="on-denim flex min-h-[220px] w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-card p-6 text-center"
+    class="on-denim flex min-h-[260px] w-full flex-col justify-between gap-6 overflow-hidden rounded-card p-6 sm:p-7"
   >
-    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-ochre/60 text-ivory">
-      <SocialIcon name="tiktok" class="h-7 w-7" />
-    </span>
-    <div>
-      <p class="font-mono text-sm text-ochre">@{{ handle }}</p>
-      <p class="mt-2 max-w-xs text-sm text-ivory/80">Gli ultimi video dal laboratorio, aggiornati in automatico da TikTok.</p>
+    <div class="flex items-center justify-between gap-4">
+      <span class="eyebrow text-muted">TikTok</span>
+      <SocialIcon name="tiktok" class="h-5 w-5 text-ivory" />
     </div>
-    <div class="relative z-10 flex flex-wrap justify-center gap-3">
-      <UiBaseButton variant="solid" @click="loaded = true">Guarda i video</UiBaseButton>
-      <UiBaseButton :href="profileUrl" target="_blank" rel="noopener noreferrer" variant="outline">Segui ↗</UiBaseButton>
+    <div>
+      <p class="font-display text-2xl text-ivory">@{{ handle }}</p>
+      <p class="mt-2 max-w-xs text-sm text-muted">Gli ultimi video dal laboratorio, aggiornati in automatico da TikTok. Si caricano solo quando li apri.</p>
+    </div>
+    <div class="relative z-10 flex flex-wrap gap-3">
+      <UiBaseButton variant="solid" size="sm" @click="loaded = true">Guarda i video</UiBaseButton>
+      <UiBaseButton :href="profileUrl" target="_blank" rel="noopener noreferrer" variant="outline" size="sm">Segui ↗</UiBaseButton>
     </div>
   </div>
 
   <!-- No card-depth here: its overlay would cover the TikTok iframe. -->
-  <div v-else class="on-denim w-full rounded-panel p-1.5 sm:p-2">
+  <div v-else class="w-full rounded-panel border border-line bg-surface p-1.5 sm:p-2 md:col-span-2">
     <ClientOnly>
       <TikTokEmbed :video-url="profileUrl" :title="`@${handle}`" :creator="handle" />
     </ClientOnly>

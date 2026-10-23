@@ -5,17 +5,17 @@ defineProps<{ steps: TutorialStep[] }>()
 </script>
 
 <template>
-  <ol class="space-y-8">
-    <li v-for="(step, i) in steps" :key="step.id" class="flex gap-4">
+  <ol class="border-t border-line">
+    <li v-for="(step, i) in steps" :key="step.id" class="flex gap-5 border-b border-line py-7">
       <span
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary font-display font-bold text-on-primary"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink text-sm tabular-nums text-ink"
         aria-hidden="true"
       >
         {{ i + 1 }}
       </span>
       <div class="flex-1">
-        <h3 class="font-display text-lg font-bold text-fg">{{ step.title }}</h3>
-        <p class="mt-1 text-fg/70">{{ step.body }}</p>
+        <h3 class="font-display text-xl text-ink">{{ step.title }}</h3>
+        <p class="mt-2 text-fg/80">{{ step.body }}</p>
         <UiStrapiImage
           v-if="step.image"
           :media="step.image"

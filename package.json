@@ -16,10 +16,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource-variable/newsreader": "^5.3.0",
-    "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource/cormorant-garamond": "^5.3.0",
-    "@fontsource/jetbrains-mono": "^5.3.0",
     "@nuxt/image": "^2.0.0",
     "@tailwindcss/vite": "^4.3.1",
     "@vueuse/core": "^13.9.0",

@@ -21,61 +21,70 @@ useSeoHead({
 </script>
 
 <template>
-  <article v-if="tutorial" class="site-container py-8 sm:py-12">
-    <nav class="mb-6 text-sm text-fg/60" aria-label="Breadcrumb">
-      <NuxtLink to="/tutorials" class="transition-colors hover:text-fg">
-        ← {{ t((m) => m.nav.tutorials) }}
-      </NuxtLink>
-    </nav>
-
-    <header class="mx-auto max-w-3xl text-center">
-      <h1 class="text-display text-fg">{{ tutorial.title }}</h1>
-      <p class="mx-auto mt-4 max-w-xl text-lead text-fg/70">{{ tutorial.description }}</p>
+  <article v-if="tutorial" class="pb-20 pt-10 sm:pt-14">
+    <header class="site-container">
+      <nav class="meta flex flex-wrap gap-2" aria-label="Breadcrumb">
+        <NuxtLink to="/editorial" class="hover:text-ink">Journal</NuxtLink>
+        <span aria-hidden="true">/</span>
+        <NuxtLink to="/tutorials" class="hover:text-ink">{{ t((m) => m.nav.tutorials) }}</NuxtLink>
+      </nav>
+      <div class="mx-auto mt-10 max-w-3xl text-center">
+        <p class="meta">Tutorial</p>
+        <h1 class="mt-4 text-display">{{ tutorial.title }}</h1>
+        <p class="mx-auto mt-5 max-w-xl text-lead text-fg/80">{{ tutorial.description }}</p>
+      </div>
     </header>
 
     <!-- Final-result image on top, as the hook -->
-    <figure class="mx-auto mt-8 max-w-3xl">
-      <UiBadge tone="gold" class="mb-3">{{ t((m) => m.tutorials.result) }}</UiBadge>
-      <UiStrapiImage
-        :media="tutorial.finalResultImage"
-        eager
-        priority
-        :width="1200"
-        :height="900"
-        sizes="(min-width: 768px) 70vw, 92vw"
-        rounded
-      />
+    <figure class="site-container mt-12">
+      <div class="mx-auto max-w-5xl">
+        <UiStrapiImage
+          :media="tutorial.finalResultImage"
+          eager
+          priority
+          :width="1200"
+          :height="900"
+          sizes="(min-width: 1024px) 64rem, 100vw"
+          rounded
+        />
+        <figcaption class="meta mt-3">{{ t((m) => m.tutorials.result) }}</figcaption>
+      </div>
     </figure>
 
-    <!-- Video below (facade — embed loads only on tap) -->
-    <section class="mx-auto mt-10 max-w-3xl">
-      <VideoFacade
-        :file="tutorial.videoFile"
-        :embed-url="tutorial.videoEmbedUrl"
-        :poster="tutorial.finalResultImage"
-        :title="tutorial.title"
-      />
-    </section>
+    <div class="site-container">
+      <!-- Video (facade — embed loads only on tap) -->
+      <section class="mx-auto mt-16 max-w-2xl" aria-labelledby="video-title">
+        <h2 id="video-title" class="text-title">{{ t((m) => m.tutorials.watch) }}</h2>
+        <div class="mt-6">
+          <VideoFacade
+            :file="tutorial.videoFile"
+            :embed-url="tutorial.videoEmbedUrl"
+            :poster="tutorial.finalResultImage"
+            :title="tutorial.title"
+          />
+        </div>
+      </section>
 
-    <!-- Steps -->
-    <section v-if="tutorial.steps.length" class="mx-auto mt-8 max-w-2xl">
-      <h2 class="font-display text-title text-fg">{{ t((m) => m.common.steps) }}</h2>
-      <div class="mt-6">
-        <StepList :steps="tutorial.steps" />
+      <!-- Steps -->
+      <section v-if="tutorial.steps.length" class="mx-auto mt-16 max-w-2xl" aria-labelledby="steps-title">
+        <h2 id="steps-title" class="text-title">{{ t((m) => m.common.steps) }}</h2>
+        <div class="mt-6">
+          <StepList :steps="tutorial.steps" />
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <div v-if="tutorial.cta" class="mx-auto mt-12 flex max-w-2xl">
+        <CtaButton :cta="tutorial.cta" size="lg" />
       </div>
-    </section>
 
-    <!-- Products used -->
-    <section v-if="tutorial.relatedProducts.length" class="mt-10">
-      <h2 class="font-display text-title text-fg">{{ t((m) => m.common.relatedProducts) }}</h2>
-      <div class="mt-6">
-        <ProductGrid :products="tutorial.relatedProducts" />
-      </div>
-    </section>
-
-    <!-- CTA -->
-    <div v-if="tutorial.cta" class="mt-8 flex justify-center">
-      <CtaButton :cta="tutorial.cta" size="lg" />
+      <!-- Products used -->
+      <section v-if="tutorial.relatedProducts.length" class="mt-20 border-t border-line pt-14" aria-labelledby="used-title">
+        <h2 id="used-title" class="text-title">{{ t((m) => m.common.relatedProducts) }}</h2>
+        <div class="mt-8">
+          <ProductGrid :products="tutorial.relatedProducts" />
+        </div>
+      </section>
     </div>
   </article>
 </template>

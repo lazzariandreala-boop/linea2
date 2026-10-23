@@ -44,12 +44,12 @@ onBeforeUnmount(() => timer && clearTimeout(timer))
     v-if="icon"
     v-show="purchasable"
     type="button"
-    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-on-primary transition-transform duration-200 ease-out-soft hover:bg-primary-strong active:scale-90"
+    class="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-line text-ink transition-[background-color,color,transform] duration-200 ease-out-soft hover:border-ink hover:bg-ink hover:text-bg active:scale-95"
     :aria-label="t((m) => m.cart.addToCart)"
     :title="t((m) => m.cart.addToCart)"
     @click="onAdd"
   >
-    <svg v-if="!justAdded" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <svg v-if="!justAdded" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
       <path d="M12 5v14M5 12h14" />
     </svg>
     <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -73,5 +73,5 @@ onBeforeUnmount(() => timer && clearTimeout(timer))
     {{ justAdded ? t((m) => m.cart.added) : t((m) => m.cart.addToCart) }}
   </UiBaseButton>
 
-  <p v-else class="text-sm font-medium text-fg/50">{{ t((m) => m.cart.priceOnRequest) }}</p>
+  <p v-else class="text-sm text-muted">{{ t((m) => m.cart.priceOnRequest) }}</p>
 </template>
