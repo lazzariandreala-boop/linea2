@@ -43,8 +43,8 @@ const altText = computed(() => props.alt ?? props.media?.alternativeText ?? '')
 
 <template>
   <div
-    class="overflow-hidden bg-surface-2"
-    :class="[rounded ? 'rounded-card' : '', fill ? 'absolute inset-0' : 'relative']"
+    class="overflow-hidden rounded-card bg-surface-2"
+    :class="[fill ? 'absolute inset-0' : 'relative']"
     :style="fill ? undefined : { aspectRatio: `${w} / ${h}` }"
   >
     <NuxtImg

@@ -800,7 +800,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 }
 .viewport {
   position: sticky;
-  top: calc(var(--header-h) + 16px);
+  top: calc(var(--header-h) + 28px);
   height: min(680px, calc(100svh - var(--header-h) - 40px));
   min-height: 520px;
   border-radius: var(--radius-card);
@@ -1434,7 +1434,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 }
 .sw.mini {
   width: 22px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 .nav {
   display: grid;

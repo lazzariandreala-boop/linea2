@@ -50,7 +50,7 @@ useSeoHead({
 <template>
   <div v-if="home">
     <!-- A · Hero -->
-    <section class="hero grid lg:grid-cols-[1fr_1fr]">
+    <section class="hero wash-section grid items-center lg:grid-cols-[1.1fr_0.9fr]">
       <div class="order-2 flex flex-col justify-center px-(--site-gutter) pb-12 pt-10 lg:order-1 sm:pb-16 sm:pt-14 lg:py-20 lg:pr-16 lg:pl-[max(var(--site-gutter),calc((100vw-var(--site-max))/2+var(--site-gutter)))]">
         <p class="kicker">Borse su ordinazione</p>
         <h1 class="mt-6 text-hero">
@@ -71,24 +71,27 @@ useSeoHead({
         </ul>
       </div>
 
-      <div class="relative order-1 h-[58svh] max-h-[640px] min-h-[360px] sm:h-[74svh] sm:max-h-[860px] bg-surface-2 lg:order-2 lg:h-auto lg:max-h-none lg:min-h-0">
-        <img
-          :src="EDITORIAL.hero.src"
-          :alt="home.heroMedia?.alternativeText ?? EDITORIAL.hero.alt"
-          :width="EDITORIAL.hero.width"
-          :height="EDITORIAL.hero.height"
-          fetchpriority="high"
-          class="absolute inset-0 h-full w-full object-cover object-[50%_60%]"
-        />
-        <p class="absolute bottom-5 left-(--site-gutter) text-[11px] uppercase tracking-[0.2em] text-ink/70 lg:left-8">
-          Stella · {{ lead.type }}
-        </p>
+      <div class="order-1 flex justify-center px-(--site-gutter) pt-8 lg:order-2 lg:justify-start lg:py-14 lg:pl-0 lg:pr-[max(var(--site-gutter),calc((100vw-var(--site-max))/2+var(--site-gutter)))]">
+        <div class="media aspect-[4/5] w-full max-w-[300px] shadow-card sm:max-w-[360px] lg:max-w-[420px]">
+          <img
+            :src="EDITORIAL.hero.src"
+            :alt="home.heroMedia?.alternativeText ?? EDITORIAL.hero.alt"
+            :width="EDITORIAL.hero.width"
+            :height="EDITORIAL.hero.height"
+            fetchpriority="high"
+            class="object-[50%_60%]"
+          />
+          <p class="absolute bottom-4 left-4 rounded-sm bg-paper/85 px-2.5 py-1 text-[11px] uppercase tracking-[0.2em] text-ink/80">
+            Stella · {{ lead.type }}
+          </p>
+        </div>
       </div>
     </section>
 
     <!-- B · The story -->
-    <section class="site-container section-y grid items-center gap-10 lg:grid-cols-12 lg:gap-8">
-      <div class="media aspect-[7/5] lg:col-span-7">
+    <section class="wash-section">
+    <div class="site-container section-y grid items-center gap-10 lg:grid-cols-12 lg:gap-8">
+      <div class="media mx-auto aspect-[7/5] w-full max-w-[520px] lg:col-span-5 lg:col-start-2">
         <img
           :src="EDITORIAL.workbench.src"
           :alt="EDITORIAL.workbench.alt"
@@ -111,6 +114,7 @@ useSeoHead({
         </p>
         <NuxtLink to="/studio" class="arrow-link mt-8">Scopri come lavoriamo</NuxtLink>
       </UiReveal>
+    </div>
     </section>
 
     <!-- C · Core collection -->
@@ -126,10 +130,10 @@ useSeoHead({
 
         <!-- Featured model -->
         <NuxtLink :to="`/customize?model=${lead.id}`" class="group mt-12 grid items-center gap-8 md:grid-cols-12 md:gap-10">
-          <div class="media aspect-[5/6] md:col-span-6 lg:col-span-5">
+          <div class="media mx-auto aspect-[5/6] w-full max-w-[260px] sm:max-w-[340px] md:col-span-5 lg:col-span-4 lg:col-start-2">
             <img :src="leadImage.src" :alt="leadImage.alt" :width="leadImage.width" :height="leadImage.height" loading="lazy" decoding="async" class="zoom-img" />
           </div>
-          <div class="md:col-span-6 lg:col-span-6 lg:col-start-7">
+          <div class="md:col-span-7 lg:col-span-6 lg:col-start-7">
             <p class="meta">In evidenza · {{ lead.type }}</p>
             <h3 class="mt-4 font-display text-[clamp(2.5rem,5vw,4.25rem)] leading-none text-ink">{{ lead.name }}</h3>
             <p class="mt-6 max-w-md text-fg/80">
@@ -154,7 +158,7 @@ useSeoHead({
     <section class="on-denim overflow-hidden" aria-labelledby="custom-title">
       <div class="site-container section-y grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
         <div class="lg:col-span-6">
-          <div class="atelier-frame relative mx-auto aspect-square w-full max-w-[560px]">
+          <div class="atelier-frame relative mx-auto aspect-square w-full max-w-[420px]">
             <img
               v-for="(src, i) in ['/bags2d/stella/front-body-indigo.webp', '/bags2d/stella/front-accent-vintage.webp', '/bags2d/stella/front-hw-brass.webp']"
               :key="src"
@@ -202,7 +206,8 @@ useSeoHead({
     </section>
 
     <!-- E · Craftsmanship and materials -->
-    <section class="site-container section-y" aria-labelledby="craft-title">
+    <section class="wash-section" aria-labelledby="craft-title">
+    <div class="site-container section-y">
       <div class="grid gap-6 lg:grid-cols-12 lg:items-end">
         <div class="lg:col-span-6">
           <p class="kicker">Materiali e lavorazione</p>
@@ -214,9 +219,9 @@ useSeoHead({
         </p>
       </div>
 
-      <div class="mt-12 grid gap-x-6 gap-y-10 md:grid-cols-12">
-        <figure class="md:col-span-7 md:row-span-2">
-          <div class="media aspect-[4/3] md:aspect-auto md:h-[calc(100%-4rem)]">
+      <div class="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-3">
+        <figure>
+          <div class="media aspect-[4/3]">
             <img :src="EDITORIAL.seam.src" :alt="EDITORIAL.seam.alt" :width="EDITORIAL.seam.width" :height="EDITORIAL.seam.height" loading="lazy" decoding="async" />
           </div>
           <figcaption class="mt-4 flex gap-4">
@@ -224,8 +229,8 @@ useSeoHead({
             <span><strong class="font-medium text-ink">Cuciture a vista.</strong> <span class="text-muted">Il filo segue il bordo di ogni pannello, senza nasconderlo.</span></span>
           </figcaption>
         </figure>
-        <figure class="md:col-span-5">
-          <div class="media aspect-[3/2]">
+        <figure>
+          <div class="media aspect-[4/3]">
             <img :src="EDITORIAL.patchwork.src" :alt="EDITORIAL.patchwork.alt" :width="EDITORIAL.patchwork.width" :height="EDITORIAL.patchwork.height" loading="lazy" decoding="async" />
           </div>
           <figcaption class="mt-4 flex gap-4">
@@ -233,8 +238,8 @@ useSeoHead({
             <span><strong class="font-medium text-ink">Denim ricomposto.</strong> <span class="text-muted">Lavaggi diversi, accostati in un unico pezzo.</span></span>
           </figcaption>
         </figure>
-        <figure class="md:col-span-5">
-          <div class="media aspect-[3/2]">
+        <figure>
+          <div class="media aspect-[4/3]">
             <img :src="EDITORIAL.brass.src" :alt="EDITORIAL.brass.alt" :width="EDITORIAL.brass.width" :height="EDITORIAL.brass.height" loading="lazy" decoding="async" />
           </div>
           <figcaption class="mt-4 flex gap-4">
@@ -243,6 +248,7 @@ useSeoHead({
           </figcaption>
         </figure>
       </div>
+    </div>
     </section>
 
     <!-- F · Accessories -->
@@ -256,7 +262,7 @@ useSeoHead({
           </p>
           <NuxtLink to="/accessories" class="arrow-link mt-8">Tutti gli accessori</NuxtLink>
         </div>
-        <ul class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:col-span-9 lg:gap-x-6">
+        <ul class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:col-span-8 lg:col-start-5 lg:gap-x-6">
           <li v-for="p in accessories.slice(0, 3)" :key="p.documentId" class="last:hidden sm:last:block">
             <ProductCard :product="p" sizes="(min-width: 1024px) 22vw, (min-width: 640px) 31vw, 46vw" />
           </li>
@@ -265,7 +271,8 @@ useSeoHead({
     </section>
 
     <!-- G · Journal -->
-    <section v-if="journalLead" class="site-container section-y" aria-labelledby="journal-title">
+    <section v-if="journalLead" class="wash-section" aria-labelledby="journal-title">
+    <div class="site-container section-y">
       <div class="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p class="kicker">Journal</p>
@@ -275,12 +282,12 @@ useSeoHead({
       </div>
 
       <div class="mt-12 grid gap-10 lg:grid-cols-12 lg:gap-8">
-        <NuxtLink :to="`/tutorials/${journalLead.slug}`" class="group lg:col-span-7">
+        <NuxtLink :to="`/tutorials/${journalLead.slug}`" class="group lg:col-span-5">
           <UiStrapiImage
             :media="journalLead.finalResultImage"
             :width="1200"
             :height="900"
-            sizes="(min-width: 1024px) 55vw, 92vw"
+            sizes="(min-width: 1024px) 40vw, 92vw"
             rounded
             img-class="zoom-img"
           />
@@ -288,7 +295,7 @@ useSeoHead({
           <h3 class="mt-3 font-display text-[clamp(1.6rem,2.6vw,2.25rem)] leading-tight text-ink">{{ journalLead.title }}</h3>
           <p class="mt-3 max-w-lg text-muted">{{ journalLead.description }}</p>
         </NuxtLink>
-        <ul class="grid content-start gap-8 lg:col-span-4 lg:col-start-9">
+        <ul class="grid content-start gap-8 lg:col-span-6 lg:col-start-7">
           <li v-for="tut in journalMore" :key="tut.slug" class="border-t border-line pt-6 first:border-0 first:pt-0 lg:first:border-t lg:first:pt-6">
             <NuxtLink :to="`/tutorials/${tut.slug}`" class="group grid grid-cols-[7.5rem_1fr] gap-5 sm:grid-cols-[10rem_1fr]">
               <UiStrapiImage :media="tut.finalResultImage" :width="1200" :height="900" sizes="160px" rounded img-class="zoom-img" />
@@ -300,6 +307,7 @@ useSeoHead({
           </li>
         </ul>
       </div>
+    </div>
     </section>
 
     <!-- H · Social and studio -->

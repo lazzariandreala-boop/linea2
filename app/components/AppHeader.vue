@@ -118,10 +118,10 @@ onBeforeUnmount(() => {
 
   <header
     ref="headerEl"
-    class="sticky top-0 z-50 border-b transition-[background-color,border-color] duration-300"
-    :class="scrolled || open ? 'border-line bg-ivory' : 'border-transparent bg-ivory'"
+    class="sticky top-0 z-50 px-(--site-gutter) pt-3"
   >
-    <div class="site-container grid h-(--header-h) grid-cols-[1fr_auto_1fr] items-center gap-4">
+    <!-- Floating chip: rounded pill with a light tan shadow -->
+    <div class="header-chip mx-auto grid h-(--header-h) max-w-(--site-max) grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 transition-shadow duration-300 sm:px-8" :class="{ 'is-scrolled': scrolled || open }">
       <!-- Left: menu button (mobile/tablet) or shop navigation -->
       <div class="flex items-center">
         <button
@@ -234,8 +234,8 @@ onBeforeUnmount(() => {
         v-if="open"
         id="mobile-nav"
         ref="drawer"
-        class="fixed inset-x-0 bottom-0 z-50 overflow-y-auto border-t border-line bg-ivory lg:hidden"
-        :style="{ top: `${drawerTop}px` }"
+        class="fixed inset-x-(--site-gutter) bottom-(--site-gutter) z-50 overflow-y-auto rounded-panel border border-line bg-paper shadow-card lg:hidden"
+        :style="{ top: `${drawerTop + 8}px` }"
         role="dialog"
         aria-modal="true"
         :aria-label="t((m) => m.nav.menu)"

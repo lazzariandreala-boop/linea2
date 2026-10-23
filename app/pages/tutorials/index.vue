@@ -21,6 +21,6 @@ useSeoHead({
       </UiReveal>
     </div>
 
-    <p v-if="!tutorials.length" class="mt-10 border border-line p-10 text-center text-muted">Nessun tutorial al momento.</p>
+    <p v-if="!tutorials.length" class="mt-10 rounded-card border border-line p-10 text-center text-muted">Nessun tutorial al momento.</p>
   </div>
 </template>

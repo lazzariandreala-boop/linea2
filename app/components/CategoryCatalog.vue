@@ -96,11 +96,11 @@ useSeoHead({
       <FilterSortBar v-model:sort="sort" v-model:tag="tag" :tags="tags" :count="displayed.length" />
 
       <div class="mt-10">
-        <p v-if="status === 'error'" class="border border-line p-10 text-center text-muted" role="alert">
+        <p v-if="status === 'error'" class="rounded-card border border-line p-10 text-center text-muted" role="alert">
           Non riusciamo a caricare i prodotti in questo momento. Riprova tra poco.
         </p>
         <ProductGrid v-else-if="displayed.length" :products="displayed" :eager-count="2" />
-        <div v-else class="border border-line px-6 py-14 text-center">
+        <div v-else class="rounded-card border border-line px-6 py-14 text-center">
           <p class="font-display text-xl text-ink">
             {{ tag ? 'Nessun pezzo con questa caratteristica.' : t((m) => m.catalog.empty) }}
           </p>

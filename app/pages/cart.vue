@@ -132,7 +132,7 @@ function onPaymentError() {
 
             <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
               <!-- Quantity stepper -->
-              <div class="inline-flex items-center border border-line" role="group" :aria-label="`${t((m) => m.cart.quantity)}: ${item.title}`">
+              <div class="inline-flex items-center overflow-hidden rounded-sm border border-line" role="group" :aria-label="`${t((m) => m.cart.quantity)}: ${item.title}`">
                 <button
                   type="button"
                   class="inline-flex h-10 w-10 items-center justify-center text-ink transition-colors hover:bg-surface-2 disabled:opacity-35"
@@ -165,7 +165,7 @@ function onPaymentError() {
       </ul>
 
       <!-- Summary + shipping + checkout -->
-      <aside class="h-fit border border-line bg-surface p-6 sm:p-8 lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:col-span-5" aria-labelledby="summary-title">
+      <aside class="h-fit rounded-panel border border-line bg-surface p-6 sm:p-8 lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:col-span-5" aria-labelledby="summary-title">
         <h2 id="summary-title" class="font-display text-2xl text-ink">Riepilogo ordine</h2>
         <dl class="mt-6 grid gap-3 border-t border-line pt-5 text-sm">
           <div class="flex justify-between">
