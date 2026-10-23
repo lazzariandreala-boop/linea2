@@ -17,11 +17,9 @@ import {
   PATCH,
   PATCH_SCALE,
   STELLA_GROUPS,
-  STELLA_INITIALS_PRICE,
   STELLA_MAX_PATCHES,
   WASH,
   addPatch,
-  cleanInitials,
   decodeStella,
   defaultStellaState,
   describeStella,
@@ -144,11 +142,6 @@ const summary = computed(() => {
 })
 
 
-function onInitials(e: Event) {
-  const el = e.target as HTMLInputElement
-  state.initials = cleanInitials(el.value)
-  el.value = state.initials
-}
 
 // ── Steps: one group at a time, with back / next and a final summary ─────
 type StepKey = TabKey | 'summary'
@@ -215,7 +208,6 @@ const breakdown = computed(() => {
   }
   const fin = findOption(FINISH, state.finish)
   rows.push({ step: 'finish', label: 'Monogramma', value: `${fin.name} · ${state.mono.side === 'front' ? 'fronte' : 'retro'}`, p: fin.p })
-  rows.push({ step: 'finish', label: 'Iniziali', value: state.initials || 'L2 (marchio Linea 2)', p: state.initials ? STELLA_INITIALS_PRICE : 0 })
   return rows
 })
 
@@ -326,7 +318,7 @@ function patchArtURL(style: string): string {
 const fontsReady = ref(false)
 const monoURL = computed(() => {
   void fontsReady.value // repaint once the serif has loaded
-  return monoCanvas(state.finish, state.initials).toDataURL()
+  return monoCanvas().toDataURL()
 })
 
 const decals = computed(() => {
@@ -461,7 +453,7 @@ async function thumbnail(snap: StellaState): Promise<string | null> {
     const s = PATCH_SCALE[pt.size]
     await place(patchArtURL(pt.style), pt, bw * b.patch.w * s, bh * b.patch.h * s)
   }
-  if (snap.mono.side === 'front') await place(monoCanvas(snap.finish, snap.initials).toDataURL(), snap.mono, bw * b.mono.w, bw * b.mono.w * 0.5)
+  if (snap.mono.side === 'front') await place(monoCanvas().toDataURL(), snap.mono, bw * b.mono.w, bw * b.mono.w * 0.5)
   dg.globalCompositeOperation = 'destination-in'
   dg.drawImage(body, 0, 0, S, S)
 
@@ -706,9 +698,10 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
               </p>
               <p v-else-if="currentGroup.key === 'lining'" class="note">La borsa si apre nella vista dall’alto, così vedi la fodera all’interno.</p>
               <p v-else-if="currentGroup.key === 'finish'" class="note">
-                Ogni borsa ha il suo monogramma: trascinalo sulla borsa per scegliere dove metterlo.
+                Ogni borsa porta il monogramma Linea 2, che non si può togliere né modificare. Trascinalo sulla borsa
+                per scegliere dove metterlo.
               </p>
-              <div class="sws">
+              <div v-if="currentGroup.key !== 'finish'" class="sws">
                 <button
                   v-for="o in currentGroup.list"
                   :key="o.id"
@@ -734,21 +727,6 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
                     </button>
                   </div>
                 </div>
-                <label class="field-row" for="stella-initials">
-                  <span>Iniziali <small>(fino a 3, facoltative)</small></span>
-                  <span class="ini">
-                    <input
-                      id="stella-initials"
-                      type="text"
-                      maxlength="3"
-                      placeholder="L2"
-                      autocomplete="off"
-                      :value="state.initials"
-                      @input="onInitials"
-                    />
-                    <span class="plus">{{ state.initials ? `+€${STELLA_INITIALS_PRICE}` : `+€${STELLA_INITIALS_PRICE} se aggiunte` }}</span>
-                  </span>
-                </label>
               </template>
             </template>
           </template>
@@ -1338,31 +1316,6 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 }
 .field-row small {
   color: var(--color-muted);
-}
-.ini {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.ini input {
-  width: 96px;
-  min-height: 40px;
-  padding: 0 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font: 500 14px var(--font-body);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.ini input:focus {
-  outline: none;
-  border-color: var(--color-ink);
-}
-.plus {
-  font-size: 12px;
-  color: var(--color-accent);
 }
 .recap {
   margin: 0;

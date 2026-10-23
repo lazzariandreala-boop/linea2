@@ -136,14 +136,11 @@ export interface StellaState {
   /** Patchwork pieces, each with its own style, size and spot (0..MAX). */
   patches: PatchItem[]
   hw: string
-  /** Monogram style; the monogram itself is always on the bag. */
+  /** Monogram: always the "Linea 2" house mark; only its spot can change. */
   finish: string
-  /** Up to 3 letters; empty means the "L2" house mark. */
-  initials: string
   mono: Placement
 }
 
-export const STELLA_INITIALS_PRICE = 15
 export const STELLA_MAX_WASHES = 2
 export const STELLA_MAX_PATCHES = 4
 export const STELLA_THREAD = '#C2A26B'
@@ -194,10 +191,8 @@ export const HW: StellaOption[] = [
   { id: 'black', name: 'Black Steel', hex: '#34363B', p: 10 },
 ]
 
-export const FINISH: StellaOption[] = [
-  { id: 'embroidery', name: 'Brass Stitch', p: 0 },
-  { id: 'leather', name: 'Leather Patch', p: 15 },
-]
+/** The monogram is fixed: a stitched leather tag reading "Linea 2". */
+export const FINISH: StellaOption[] = [{ id: 'linea2', name: 'Linea 2', p: 0 }]
 
 export const STELLA_GROUPS: { key: StellaGroup; tab: string; title: string; list: StellaOption[] }[] = [
   { key: 'wash', tab: 'Lavaggio', title: 'Lavaggio del denim', list: WASH },
@@ -236,8 +231,7 @@ export function defaultStellaState(model = 'stella'): StellaState {
     lining: 'floral',
     patches: [{ style: 'organic', size: 'L', ...patchSpot(bag, 0) }],
     hw: 'brass',
-    finish: 'embroidery',
-    initials: '',
+    finish: 'linea2',
     mono: monoSpot(bag),
   }
 }
@@ -247,11 +241,6 @@ export function addPatch(s: StellaState, style = 'organic'): PatchItem[] {
   if (s.patches.length >= STELLA_MAX_PATCHES) return s.patches
   const bag = findBag(s.model)
   return [...s.patches, { style: findOption(PATCH, style).id, size: s.patches.length ? 'S' : 'L', ...patchSpot(bag, s.patches.length) }]
-}
-
-/** Normalise initials: letters/digits only, uppercase, max 3. */
-export function cleanInitials(raw: string): string {
-  return raw.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 3)
 }
 
 /**
@@ -287,8 +276,7 @@ export function stellaPrice(s: StellaState): number {
     findOption(LINING, s.lining).p +
     patches +
     (hasHardware(bag) ? findOption(HW, s.hw).p : 0) +
-    findOption(FINISH, s.finish).p +
-    (s.initials ? STELLA_INITIALS_PRICE : 0)
+    findOption(FINISH, s.finish).p
   )
 }
 
@@ -309,7 +297,7 @@ export function describeStella(s: StellaState): string {
     patchSummary(s.patches),
   ]
   if (hasHardware(bag)) parts.push(findOption(HW, s.hw).name)
-  parts.push(findOption(FINISH, s.finish).name + (s.initials ? ` "${s.initials}"` : ''))
+  parts.push(`Monogramma ${findOption(FINISH, s.finish).name}`)
   return parts.join(' · ')
 }
 
@@ -326,7 +314,6 @@ export function stellaKey(s: StellaState): string {
     s.patches.map((pt) => `${pt.style}/${pt.size}@${place(pt)}`).join('|'),
     hasHardware(bag) ? s.hw : '',
     s.finish,
-    s.initials,
     place(s.mono),
   ].join(':')
 }
@@ -341,7 +328,6 @@ export function encodeStella(s: StellaState): string {
     p: s.patches.map((pt) => [pt.style, pt.size, pt.side[0], r3(pt.u), r3(pt.v)]),
     h: s.hw,
     f: s.finish,
-    i: s.initials,
     o: [s.mono.side[0], r3(s.mono.u), r3(s.mono.v)],
   }
   return encodeURIComponent(JSON.stringify(c))
@@ -376,7 +362,6 @@ export function decodeStella(raw: string): StellaState | null {
     patches,
     hw: findOption(HW, str(c.h, '')).id,
     finish: findOption(FINISH, str(c.f, '')).id,
-    initials: cleanInitials(str(c.i, '')),
     mono: o.length === 3 ? { side: side(o[0]), u: clamp01(Number(o[1])), v: clamp01(Number(o[2])) } : base.mono,
   }
 }

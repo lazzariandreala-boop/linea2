@@ -3,7 +3,6 @@ import {
   STELLA_MAX_PATCHES,
   WASH,
   addPatch,
-  cleanInitials,
   decodeStella,
   defaultStellaState,
   describeStella,
@@ -26,9 +25,9 @@ describe('stella configurator options', () => {
     expect(stellaPrice(defaultStellaState())).toBe(410)
   })
 
-  it('adds wash, lining, patch, hardware and finish surcharges', () => {
-    const s = withPatches({ ...defaultStellaState(), wash: ['raw'], lining: 'twill', hw: 'black', finish: 'leather' }, ['street'])
-    expect(stellaPrice(s)).toBe(360 + 20 + 10 + 30 + 10 + 15)
+  it('adds wash, lining, patch and hardware surcharges', () => {
+    const s = withPatches({ ...defaultStellaState(), wash: ['raw'], lining: 'twill', hw: 'black' }, ['street'])
+    expect(stellaPrice(s)).toBe(360 + 20 + 10 + 30 + 10)
   })
 
   it('prices every patch on its own, and none at all', () => {
@@ -44,11 +43,11 @@ describe('stella configurator options', () => {
     expect(spots.size).toBe(STELLA_MAX_PATCHES)
   })
 
-  it('always has a monogram; initials cost extra', () => {
+  it('always has the fixed "Linea 2" monogram, at no extra cost', () => {
     const base = defaultStellaState()
-    expect(base.finish).toBe('embroidery')
-    expect(stellaPrice({ ...base, initials: 'AL' })).toBe(425)
-    expect(describeStella(base)).toContain('Brass Stitch')
+    expect(base.finish).toBe('linea2')
+    expect(base).not.toHaveProperty('initials')
+    expect(describeStella(base)).toContain('Monogramma Linea 2')
   })
 
   it('offers grey and black denim', () => {
@@ -67,7 +66,7 @@ describe('stella configurator options', () => {
     expect(luna.wash).toEqual(['indigo'])
     // 290 base + floral 25 + organic 25; black steel (+10) does not apply.
     expect(stellaPrice(luna)).toBe(340)
-    expect(describeStella(luna)).toBe('Deep Indigo · Floral Silk · Organic Patterns · Brass Stitch')
+    expect(describeStella(luna)).toBe('Deep Indigo · Floral Silk · Organic Patterns · Monogramma Linea 2')
     expect(toggleWash(luna.wash, 'raw', 1)).toEqual(['raw'])
     expect(stellaKey(luna)).not.toBe(stellaKey(defaultStellaState()))
   })
@@ -82,10 +81,6 @@ describe('stella configurator options', () => {
     expect(withModel(defaultStellaState(), 'nope').model).toBe('stella')
   })
 
-  it('cleans initials to 3 uppercase letters/digits', () => {
-    expect(cleanInitials('a.l 2x')).toBe('AL2')
-  })
-
   it('gives identical configurations the same cart key, and moved decals a new one', () => {
     const a = defaultStellaState()
     expect(stellaKey(a)).toBe(stellaKey(defaultStellaState()))
@@ -95,15 +90,15 @@ describe('stella configurator options', () => {
   })
 
   it('describes the configuration for the cart line', () => {
-    const s = withPatches({ ...defaultStellaState(), initials: 'AL' }, ['organic', 'organic', 'street'])
+    const s = withPatches(defaultStellaState(), ['organic', 'organic', 'street'])
     expect(describeStella(s)).toBe(
-      'Deep Indigo + Vintage Light Blue · Floral Silk · Organic Patterns ×2 + Street Art · Brass · Brass Stitch "AL"',
+      'Deep Indigo + Vintage Light Blue · Floral Silk · Organic Patterns ×2 + Street Art · Brass · Monogramma Linea 2',
     )
     expect(describeStella(withPatches(s, []))).toContain('No patches')
   })
 
   it('round-trips a design through the cart link', () => {
-    const s = withPatches({ ...withModel(defaultStellaState(), 'sole'), wash: ['charcoal'], initials: 'AL', finish: 'leather' }, ['graphic', 'street'])
+    const s = withPatches({ ...withModel(defaultStellaState(), 'sole'), wash: ['charcoal'] }, ['graphic', 'street'])
     s.patches[1] = { ...s.patches[1]!, side: 'back', u: 0.31, v: 0.62, size: 'M' }
     s.mono = { u: 0.4, v: 0.7, side: 'front' }
     expect(decodeStella(encodeStella(s))).toEqual(s)
@@ -115,7 +110,7 @@ describe('stella configurator options', () => {
     expect(bad.model).toBe('luna')
     expect(bad.wash).toEqual(['indigo'])
     expect(bad.patches).toEqual([{ style: 'organic', size: 'M', side: 'back', u: 0.95, v: 0.05 }])
-    expect(bad.initials).toBe('ABC')
-    expect(bad.finish).toBe('embroidery')
+    expect(bad).not.toHaveProperty('initials')
+    expect(bad.finish).toBe('linea2')
   })
 })

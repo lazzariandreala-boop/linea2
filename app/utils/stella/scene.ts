@@ -603,10 +603,10 @@ export function createStellaScene(opts: StellaSceneOptions): StellaScene {
       placeDecal(m, mono, state.mono)
       mono.geoKey = geoKey
     }
-    const texKey = `${state.finish}|${state.initials}`
+    const texKey = state.finish
     if (texKey !== mono.texKey) {
       disposeMaterial(mono.mesh.material)
-      mono.mesh.material = decalMaterial(tex(monoCanvas(state.finish, state.initials)), 4)
+      mono.mesh.material = decalMaterial(tex(monoCanvas()), 4)
       ;(mono.mesh.material as THREE.MeshStandardMaterial).alphaTest = 0.3
       mono.texKey = texKey
     }

@@ -350,10 +350,11 @@ function metalArt(g: Ctx, hex: string, size: number) {
   g.fillRect(0, 0, size, size)
 }
 
-function finishArt(g: Ctx, id: string, size: number) {
-  g.fillStyle = id === 'leather' ? '#7B4B2C' : '#1F2C4C'
+// Swatch of the fixed "Linea 2" leather tag (the id no longer varies).
+function finishArt(g: Ctx, _id: string, size: number) {
+  g.fillStyle = '#7B4B2C'
   g.fillRect(0, 0, size, size)
-  g.fillStyle = id === 'leather' ? '#4C2B17' : '#C2A26B'
+  g.fillStyle = '#F1E3C8'
   g.font = `600 ${size * 0.45}px "Cormorant Garamond", Georgia, serif`
   g.textAlign = 'center'
   g.textBaseline = 'middle'
@@ -417,42 +418,26 @@ export function patchCanvas(style: string, washId: string, aspect: number, tile 
   return c
 }
 
-/** Monogram decal: embroidered brass letters or a stitched leather tag. */
-export function monoCanvas(finish: string, initials: string): HTMLCanvasElement {
+/** Monogram decal: the fixed "Linea 2" mark on a stitched leather tag. */
+export function monoCanvas(): HTMLCanvasElement {
   const c = canvas(512, 256)
   const g = ctx(c)
-  const txt = initials || 'L2'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  if (finish === 'leather') {
-    g.fillStyle = '#7B4B2C'
-    g.beginPath()
-    g.roundRect(20, 20, 472, 216, 20)
-    g.fill()
-    g.strokeStyle = THREAD
-    g.lineWidth = 4
-    g.setLineDash([12, 8])
-    g.strokeRect(42, 42, 428, 172)
-    g.setLineDash([])
-    g.fillStyle = '#4A2915'
-    g.font = `600 ${txt.length > 2 ? 120 : 150}px "Cormorant Garamond", Georgia, serif`
-    g.fillText(txt, 256, 136)
-  } else {
-    g.font = `600 ${txt.length > 2 ? 150 : 190}px "Cormorant Garamond", Georgia, serif`
-    g.fillStyle = 'rgba(0,0,0,.4)'
-    g.fillText(txt, 260, 134)
-    g.fillStyle = '#C2A26B'
-    g.fillText(txt, 256, 128)
-    g.globalCompositeOperation = 'source-atop'
-    g.strokeStyle = 'rgba(255,240,210,.35)'
-    g.lineWidth = 2
-    for (let h = -256; h < 512; h += 7) {
-      g.beginPath()
-      g.moveTo(h, 0)
-      g.lineTo(h + 180, 256)
-      g.stroke()
-    }
-  }
+  g.fillStyle = '#7B4B2C'
+  g.beginPath()
+  g.roundRect(20, 20, 472, 216, 20)
+  g.fill()
+  g.strokeStyle = THREAD
+  g.lineWidth = 4
+  g.setLineDash([12, 8])
+  g.strokeRect(42, 42, 428, 172)
+  g.setLineDash([])
+  g.fillStyle = 'rgba(0,0,0,.35)'
+  g.font = '600 112px "Cormorant Garamond", Georgia, serif'
+  g.fillText('Linea 2', 258, 137)
+  g.fillStyle = '#F1E3C8'
+  g.fillText('Linea 2', 256, 134)
   return c
 }
 
