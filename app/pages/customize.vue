@@ -2,7 +2,7 @@
 useSeoHead({
   title: 'Personalizza la tua borsa',
   description:
-    'Personalizza la tua borsa: modello, lavaggio del denim, fodera, toppe patchwork, accessori in metallo e monogramma con le tue iniziali.',
+    'Personalizza la tua borsa: modello, lavaggio del denim, fodera, toppe patchwork, accessori in metallo e posizione dell’etichetta Linea 2.',
 })
 </script>
 

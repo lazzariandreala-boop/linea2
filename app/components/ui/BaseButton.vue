@@ -28,14 +28,14 @@ const tag = computed(() =>
 
 const VARIANTS: Record<string, string> = {
   solid: 'btn-solid',
-  outline: 'border border-ink/50 text-ink hover:border-ink hover:bg-ink hover:text-bg',
-  ghost: 'text-ink underline-offset-4 hover:underline',
+  outline: 'border border-white/20 text-ink hover:border-gold hover:text-gold',
+  ghost: 'text-ink underline-offset-4 hover:text-gold hover:underline',
 }
 
 const SIZES: Record<string, string> = {
-  sm: 'px-5 py-2 text-[11px] min-h-[40px]',
-  md: 'px-6 py-3 text-[11.5px] min-h-[46px]',
-  lg: 'px-8 py-3.5 text-[12px] min-h-[52px]',
+  sm: 'px-5 py-2 text-[11px] tracking-[0.18em] min-h-[40px]',
+  md: 'px-6 py-3 text-[11.5px] tracking-[0.2em] min-h-[46px]',
+  lg: 'px-8 py-4 text-[12px] tracking-[0.2em] min-h-[54px]',
 }
 </script>
 
@@ -48,7 +48,7 @@ const SIZES: Record<string, string> = {
     :rel="rel"
     :type="tag === 'button' ? type : undefined"
     :disabled="tag === 'button' ? disabled : undefined"
-    class="inline-flex select-none items-center justify-center gap-2 rounded-sm font-semibold uppercase tracking-[0.16em] transition-[transform,background-color,border-color,color] duration-300 ease-out-soft active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
+    class="inline-flex select-none items-center justify-center gap-2 rounded-sm font-semibold uppercase transition-[transform,background-color,border-color,color,box-shadow] duration-300 ease-out-soft active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
     :class="[VARIANTS[variant], SIZES[size], block ? 'w-full' : '']"
   >
     <slot />

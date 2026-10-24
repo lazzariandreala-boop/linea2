@@ -6,7 +6,7 @@ withDefaults(
 
 const TONES: Record<string, string> = {
   primary: 'bg-primary text-on-primary',
-  accent: 'bg-paper/95 text-navy',
+  accent: 'border border-white/10 bg-graphite/80 text-gold',
   gold: 'border border-brass text-accent',
   neutral: 'border border-line text-muted',
   outline: 'border border-line text-fg',

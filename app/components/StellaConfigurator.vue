@@ -785,8 +785,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   overflow: hidden;
   /* Studio: lit ivory wall over a linen table, light from the left. */
   background:
-    radial-gradient(70% 60% at 30% 20%, rgb(255 252 246 / 0.75), transparent 65%),
-    linear-gradient(180deg, #ece5d8 0%, #f2ede4 70%, #e3d9c8 70.3%, #d9cdb9 100%);
+    radial-gradient(70% 60% at 30% 20%, rgb(197 160 89 / 0.1), transparent 65%),
+    linear-gradient(180deg, #1c1e23 0%, #17181c 70%, #111215 70.3%, #0e0f12 100%);
+  border: 1px solid var(--color-line);
 }
 .bag-wrap {
   position: absolute;
@@ -801,7 +802,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   height: 100%;
   max-width: 100%;
   aspect-ratio: 1;
-  filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.3));
+  filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.6));
 }
 @media (prefers-reduced-motion: no-preference) {
   .bag2d {
@@ -840,7 +841,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 }
 .decal.sel,
 .decal:focus-visible {
-  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px var(--color-navy));
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px var(--color-primary));
 }
 .vp-ui {
   position: absolute;
@@ -875,7 +876,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   text-align: center;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  background: rgb(20 38 56 / 0.7);
+  background: rgb(14 15 18 / 0.8);
   color: #fff;
   font-size: 12px;
   pointer-events: none;
@@ -890,9 +891,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   gap: 8px;
   align-items: center;
   padding: 0 14px 0 12px;
-  border: 1px solid var(--color-navy);
-  background: var(--color-navy);
-  color: var(--color-ivory);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font: 600 11px/1 var(--font-body);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -900,7 +901,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   transition: background-color 0.2s;
 }
 .pill:hover {
-  background: var(--color-indigo);
+  background: var(--color-primary-strong);
 }
 .pill svg {
   width: 17px;
@@ -914,9 +915,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   left: 18px;
   bottom: 18px;
   display: flex;
-  border: 1px solid rgb(20 38 56 / 0.2);
+  border: 1px solid rgb(255 255 255 / 0.15);
   border-radius: var(--radius-sm);
-  background: rgb(252 250 246 / 0.85);
+  background: rgb(14 15 18 / 0.75);
   overflow: hidden;
 }
 .views button {
@@ -931,11 +932,11 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   cursor: pointer;
 }
 .views button + button {
-  border-left: 1px solid rgb(20 38 56 / 0.12);
+  border-left: 1px solid rgb(255 255 255 / 0.1);
 }
 .views button[aria-pressed='true'] {
-  background: var(--color-navy);
-  color: var(--color-ivory);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .vp-ctrl {
   position: absolute;
@@ -948,9 +949,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   width: 38px;
   height: 38px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgb(20 38 56 / 0.2);
-  background: rgb(252 250 246 / 0.85);
-  color: var(--color-navy);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  background: rgb(14 15 18 / 0.75);
+  color: var(--color-ink);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -963,8 +964,8 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   stroke-width: 1.4;
 }
 .vp-ctrl button[aria-pressed='true'] {
-  background: var(--color-navy);
-  color: var(--color-ivory);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .hint {
   position: absolute;
@@ -974,7 +975,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   font: 400 11px/1.3 var(--font-body);
   letter-spacing: 0.04em;
   color: var(--color-ivory);
-  background: rgb(20 38 56 / 0.6);
+  background: rgb(14 15 18 / 0.7);
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   white-space: nowrap;
@@ -1072,9 +1073,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   color: var(--color-ink);
 }
 .steps button[aria-current='step'] .n {
-  background: var(--color-navy);
-  border-color: var(--color-navy);
-  color: var(--color-ivory);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .bar {
   height: 1px;
@@ -1171,7 +1172,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--color-navy);
+  background: var(--color-primary);
   display: none;
   place-items: center;
 }
@@ -1284,8 +1285,8 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   border-left: 1px solid var(--line);
 }
 .seg button[aria-pressed='true'] {
-  background: var(--color-navy);
-  color: var(--color-ivory);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .padd {
   min-height: 44px;
@@ -1370,7 +1371,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 .err {
   margin-top: 12px;
   font-size: 13px;
-  color: #9b3b2f;
+  color: #e0907f;
 }
 .buy {
   display: grid;
@@ -1434,9 +1435,9 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
 .add {
   min-height: 52px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-navy);
-  background: var(--color-navy);
-  color: var(--color-ivory);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font: 600 12px/1 var(--font-body);
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1444,7 +1445,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
   transition: background-color 0.2s;
 }
 .add:hover {
-  background: var(--color-indigo);
+  background: var(--color-primary-strong);
 }
 .added {
   font-size: 12px;
@@ -1476,7 +1477,7 @@ function onPlace3d(kind: DecalKind, index: number, at: Placement) {
     position: sticky;
     bottom: 0;
     z-index: 5;
-    box-shadow: 0 -10px 24px -18px rgb(20 38 56 / 0.35);
+    box-shadow: 0 -10px 24px -18px rgb(0 0 0 / 0.8);
   }
 }
 @media (max-width: 520px) {

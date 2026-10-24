@@ -118,7 +118,7 @@ useSeoHead({
     <Transition name="bar">
       <div
         v-if="showBar && product.price !== null"
-        class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ivory/95 px-(--site-gutter) py-3 backdrop-blur-sm lg:hidden"
+        class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-graphite/95 px-(--site-gutter) py-3 backdrop-blur-sm lg:hidden"
         style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
       >
         <div class="flex items-center justify-between gap-4">

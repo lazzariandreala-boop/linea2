@@ -1,5 +1,8 @@
 <script setup lang="ts">
 const { t } = useT()
+const route = useRoute()
+/** The home hero runs under the fixed header; every other page starts below it. */
+const underHeader = computed(() => route.path === '/')
 </script>
 
 <template>
@@ -13,7 +16,7 @@ const { t } = useT()
 
     <AppHeader />
 
-    <main id="main" class="flex-1">
+    <main id="main" class="flex-1" :class="underHeader ? '' : 'pt-[calc(var(--header-h)+3rem)]'">
       <slot />
     </main>
 

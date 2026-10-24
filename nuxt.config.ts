@@ -133,7 +133,7 @@ export default defineNuxtConfig({
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover',
         },
-        { name: 'theme-color', content: '#142638' },
+        { name: 'theme-color', content: '#0E0F12' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
       link: [

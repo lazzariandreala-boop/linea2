@@ -82,7 +82,7 @@ onBeforeUnmount(() => {
     <Teleport to="body">
       <div
         v-if="zoom !== null"
-        class="fixed inset-0 z-[100] flex flex-col bg-ivory"
+        class="fixed inset-0 z-[100] flex flex-col bg-graphite"
         role="dialog"
         aria-modal="true"
         :aria-label="`${title}: foto ${zoom + 1} di ${images.length}`"

@@ -2,58 +2,63 @@
 
 /*
  * ───────────────────────────────────────────────────────────────────────
- * Linea 2 — design system: quiet luxury, contemporary Italian craft.
- * Ivory and warm white carry the editorial surfaces, midnight navy and
- * indigo anchor the important sections, muted brass is a rare accent.
- * Newsreader (editorial serif) for headlines and product names, Instrument
- * Sans for navigation, body copy, controls and metadata.
- * Thin dividers, soft white-to-tan gradients between sections, and soft
- * corners everywhere: 8px minimum on every control, photo and card.
+ * Linea 2 — design system: dark atelier (2026-10-24).
+ * Near-black graphite surfaces (#0E0F12 / #121316), warm off-white text,
+ * a single gold accent (#C5A059) for CTAs, kickers and the italic word in
+ * each headline. Newsreader (serif) for headlines, Instrument Sans for UI.
+ * Hairline white/10 borders, soft gradients for depth, and soft corners
+ * everywhere: 8px minimum on every control, photo and card.
  * SEMANTIC tokens (bg/surface/fg/primary/accent) drive every utility; an
- * `.on-denim` container re-points them for the navy sections.
+ * `.on-denim` container lifts a section onto the second graphite tone.
  * ───────────────────────────────────────────────────────────────────────
  */
 @theme {
   /* Brand palette */
-  --color-ivory: #f5f1e8;
-  --color-paper: #fcfaf6;
-  --color-navy: #142638;
-  --color-indigo: #253d55;
-  --color-denim: #627d93;
-  --color-brass: #b49a65;
-  --color-brass-ink: #75633b; /* brass for small text: AA on ivory */
-  --color-charcoal: #252725;
-  --color-line: #ddd7cc;
+  --color-graphite: #0e0f12;
+  --color-graphite-2: #121316;
+  --color-graphite-3: #1a1c21;
+  --color-gold: #c5a059;
+  --color-gold-hi: #d4af37;
+  --color-stone: #a0a5aa;
+  --color-sand: #d1ccc4;
 
-  /* Legacy names, re-pointed (configurator, auth, account) */
-  --color-ivory-2: #eee8dc;
-  --color-denim-2: #253d55;
-  --color-ochre: #b49a65;
-  --color-ochre-strong: #9c8350;
-  --color-selvedge: #142638;
-  --color-wash: #253d55;
-  --color-raw: #0e1a27;
-  --color-parchment: #f5f1e8;
-  --color-brass-hi: #75633b;
-  --color-pewter: #5f625d;
-  --color-cream: #f5f1e8;
+  /* Legacy names, re-pointed onto the dark palette */
+  --color-ivory: #f4f3ef; /* light text on dark */
+  --color-paper: #121316; /* raised dark surface */
+  --color-navy: #0e0f12;
+  --color-indigo: #c5a059; /* the italic headline word: now gold */
+  --color-denim: #627d93;
+  --color-brass: #c5a059;
+  --color-brass-ink: #c5a059;
+  --color-charcoal: #f4f3ef;
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-ivory-2: #1a1c21;
+  --color-denim-2: #1a1c21;
+  --color-ochre: #c5a059;
+  --color-ochre-strong: #d4af37;
+  --color-selvedge: #121316;
+  --color-wash: #1a1c21;
+  --color-raw: #08090b;
+  --color-parchment: #f4f3ef;
+  --color-brass-hi: #c5a059;
+  --color-pewter: #a0a5aa;
+  --color-cream: #f4f3ef;
 
   /* Surfaces & ink */
-  --color-bg: #f5f1e8;
-  --color-surface: #fcfaf6;
-  --color-surface-2: #eee8dc;
-  --color-fg: #252725;
-  --color-ink: #142638; /* headlines */
-  --color-muted: #5f625d;
+  --color-bg: #0e0f12;
+  --color-surface: #121316;
+  --color-surface-2: #1a1c21;
+  --color-fg: #d1ccc4;
+  --color-ink: #ffffff; /* headlines */
+  --color-muted: #a0a5aa;
 
   /* Brand roles */
-  --color-primary: #142638;
-  --color-primary-strong: #253d55;
-  --color-on-primary: #fcfaf6;
-  --color-accent: #75633b;
-  --color-accent-strong: #5f5030;
-  --color-accent-2: #b49a65;
-  --color-gold: #b49a65;
+  --color-primary: #c5a059;
+  --color-primary-strong: #d4af37;
+  --color-on-primary: #0e0f12;
+  --color-accent: #c5a059;
+  --color-accent-strong: #d4af37;
+  --color-accent-2: #c5a059;
 
   /* Type */
   --font-body: 'Instrument Sans Variable', 'Instrument Sans', 'Helvetica Neue', Arial, ui-sans-serif, system-ui, sans-serif;
@@ -93,30 +98,31 @@
   --radius-panel: 14px;
   --radius-pill: 9999px;
 
-  /* Warm tan used by the header shadow and the section gradients */
-  --color-tan: #d9c4a3;
-  --color-tan-soft: #ece0cc;
+  /* Kept for old references: warm tones, now dark */
+  --color-tan: #1a1c21;
+  --color-tan-soft: #121316;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
 
   /* Shadows kept for floating layers only (menus, dialogs). */
-  --shadow-card: 0 1px 2px rgb(20 38 56 / 0.05), 0 12px 32px -20px rgb(20 38 56 / 0.25);
-  --shadow-float: 0 30px 70px -30px rgb(20 38 56 / 0.4);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 24px 48px -24px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 30px 70px -30px rgb(0 0 0 / 0.85);
+  --shadow-gold: 0 12px 30px -12px rgb(197 160 89 / 0.35);
 
   --breakpoint-xs: 26rem;
 }
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
     /* Layout tokens */
     --site-gutter: clamp(1rem, 4vw, 3rem);
     --site-max: 84rem;
     --text-max: 38rem;
     --space-section: clamp(4rem, 8vw, 7.5rem);
     --space-block: clamp(2rem, 4vw, 3.5rem);
-    --header-h: 60px;
+    --header-h: 72px;
     --border: 1px solid var(--color-line);
     --dur: 0.35s;
     --shadow-input: 0 0 0 1px var(--color-line);
@@ -154,12 +160,12 @@
   }
 
   ::selection {
-    background-color: var(--color-navy);
-    color: var(--color-ivory);
+    background-color: var(--color-gold);
+    color: var(--color-graphite);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-ink);
+    outline: 2px solid var(--color-gold);
     outline-offset: 3px;
     border-radius: 2px;
   }
@@ -189,50 +195,64 @@
     padding-block: var(--space-section);
   }
 
-  /* Navy section: re-points the tokens so any content inside reads ivory on
-     navy, over a barely-there real twill. */
+  /* Raised section: the second graphite tone with a faint gold glow. */
   .on-denim {
-    --color-bg: #142638;
-    --color-surface: #1b3147;
-    --color-surface-2: #253d55;
-    --color-fg: #f5f1e8;
-    --color-ink: #f5f1e8;
-    --color-muted: #aeb8c2;
-    --color-line: rgb(245 241 232 / 0.16);
-    --color-accent: #c9b07b;
-    --color-brass-hi: #c9b07b;
-    --color-primary: #f5f1e8;
-    --color-primary-strong: #ffffff;
-    --color-on-primary: #142638;
-    --shadow-input: 0 0 0 1px rgb(245 241 232 / 0.25);
+    --color-bg: #121316;
+    --color-surface: #0e0f12;
+    --color-surface-2: #1a1c21;
     position: relative;
     isolation: isolate;
     color: var(--color-fg);
-    background-color: #142638;
-  }
-  .on-denim::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: url('/textures/denim-indigo.webp') 0 0 / 240px 240px repeat;
-    opacity: 0.1;
-    mix-blend-mode: soft-light;
-    border-radius: inherit;
+    background:
+      radial-gradient(55% 60% at 100% 0%, rgb(197 160 89 / 0.07), transparent 70%),
+      linear-gradient(180deg, #131418 0%, #101114 100%);
   }
 
-  /* Alternate surface: a light wash from warm white to pale tan. */
+  /* Alternate surface (#121316) with a soft gold light from the corner. */
   .band {
     background:
-      radial-gradient(60% 70% at 100% 0%, rgb(217 196 163 / 0.35), transparent 70%),
-      linear-gradient(180deg, var(--color-paper) 0%, var(--color-tan-soft) 100%);
+      radial-gradient(60% 70% at 100% 0%, rgb(197 160 89 / 0.06), transparent 70%),
+      linear-gradient(180deg, #131418 0%, #111215 100%);
   }
-  /* Plain sections: the opposite wash, tan fading into ivory. */
+  /* Plain sections (#0E0F12): the opposite wash. */
   .wash-section {
     background:
-      radial-gradient(55% 60% at 0% 100%, rgb(217 196 163 / 0.3), transparent 70%),
-      linear-gradient(180deg, var(--color-ivory) 0%, #f0e6d6 100%);
+      radial-gradient(55% 60% at 0% 100%, rgb(197 160 89 / 0.05), transparent 70%),
+      linear-gradient(180deg, #0e0f12 0%, #0c0d10 100%);
+  }
+
+  /* Faint architectural grid (hero backgrounds) */
+  .grid-overlay {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+    background-size: 4rem 4rem;
+  }
+
+  /* Gold outlined chip (hero badge, category tags) */
+  .chip-gold {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgb(197 160 89 / 0.4);
+    border-radius: var(--radius-sm);
+    background: rgb(197 160 89 / 0.1);
+    color: var(--color-gold);
+    padding: 0.4rem 1rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+
+  /* Square icon tile with a gold hairline */
+  .icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(197 160 89 / 0.35);
+    border-radius: var(--radius-sm);
+    background: rgb(197 160 89 / 0.05);
+    color: var(--color-gold);
   }
 
   /* Eyebrow with a short brass rule */
@@ -242,16 +262,10 @@
     gap: 0.75rem;
     font-size: var(--text-eyebrow);
     line-height: var(--text-eyebrow--line-height);
-    letter-spacing: var(--text-eyebrow--letter-spacing);
+    letter-spacing: 0.25em;
     text-transform: uppercase;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--color-accent);
-  }
-  .kicker::before {
-    content: '';
-    width: 1.75rem;
-    height: 1px;
-    background: currentColor;
   }
 
   .ochre-rule {
@@ -266,9 +280,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--color-ink);
     background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
@@ -277,6 +291,7 @@
   }
   .arrow-link::after {
     content: '→';
+    color: var(--color-gold);
     transition: transform var(--dur) var(--ease-out-soft);
   }
   .arrow-link:hover {
@@ -358,19 +373,11 @@
     border: var(--border);
   }
   .on-denim .panel-glass {
-    background: rgb(20 38 56 / 0.85);
+    background: rgb(14 15 18 / 0.9);
   }
 
   .site-canvas {
-    background: linear-gradient(180deg, var(--color-paper) 0%, var(--color-ivory) 35%, #efe4d2 100%);
-  }
-
-  /* Header chip: floating pill with a light tan shadow */
-  .header-chip {
-    border: 1px solid rgb(217 196 163 / 0.55);
-    border-radius: var(--radius-pill);
-    background: linear-gradient(90deg, #f3e9d9 0%, var(--color-paper) 50%, #f3e9d9 100%);
-    box-shadow: 0 10px 28px -12px rgb(166 128 82 / 0.45), 0 2px 6px rgb(166 128 82 / 0.12);
+    background: var(--color-bg);
   }
 
   .gold-rule {
@@ -412,10 +419,10 @@
   .field:focus,
   .field:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 1.5px var(--color-ink);
+    box-shadow: 0 0 0 1px var(--color-gold);
   }
   .field[aria-invalid='true'] {
-    box-shadow: 0 0 0 1.5px #9b3b2f;
+    box-shadow: 0 0 0 1.5px #e0907f;
   }
   .field-pill {
     border-radius: var(--radius-sm);
@@ -427,7 +434,7 @@
     cursor: pointer;
     background-repeat: no-repeat;
     background-position: right 0.95rem center;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23142638' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23C5A059' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 
   /* Buttons */
@@ -435,6 +442,7 @@
     background-color: var(--color-primary);
     color: var(--color-on-primary);
     font-weight: 600;
+    box-shadow: var(--shadow-gold);
   }
   .btn-solid:hover {
     background-color: var(--color-primary-strong);
@@ -451,10 +459,7 @@
   }
 
   .form-error {
-    color: #9b3b2f;
-  }
-  .on-denim .form-error {
-    color: #f1b3a6;
+    color: #e0907f;
   }
 }
 
