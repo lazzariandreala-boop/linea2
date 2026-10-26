@@ -47,25 +47,20 @@ test('a product detail page renders gallery + CTA', async ({ page }) => {
   await expect(page.locator('a[href^="https://wa.me/"]').first()).toBeVisible()
 })
 
-test('TikTok facade does NOT load embed.js until interaction', async ({ page }) => {
+test('TikTok videos autoplay in the official player, without embed.js', async ({ page }) => {
   const embedRequests: string[] = []
   page.on('request', (req) => {
     if (req.url().includes('tiktok.com/embed.js')) embedRequests.push(req.url())
   })
 
-  await page.goto('/tiktok', { waitUntil: 'networkidle' })
-  // Facade visible, embed.js NOT requested yet.
-  const play = page.getByRole('button', { name: /Tocca per riprodurre/ }).first()
-  await expect(play).toBeVisible()
-  expect(embedRequests, 'embed.js must not load before interaction').toHaveLength(0)
-
-  // Tap-to-play -> embed.js is requested. Arm the wait concurrently with the
-  // click so we don't miss the request the click itself fires.
-  const [embedReq] = await Promise.all([
-    page.waitForRequest(/tiktok\.com\/embed\.js/, { timeout: 8_000 }),
-    play.click(),
-  ])
-  expect(embedReq.url()).toContain('tiktok.com/embed.js')
+  await page.goto('/tiktok', { waitUntil: 'domcontentloaded' })
+  // The first video's player mounts by itself once it is on screen: muted
+  // autoplay in TikTok's player iframe, no tap and no embed.js needed.
+  const player = page.locator('iframe[src*="tiktok.com/player/v1/"]').first()
+  await expect(player).toBeAttached({ timeout: 8_000 })
+  await expect(player).toHaveAttribute('src', /autoplay=1/)
+  await expect(player).toHaveAttribute('src', /loop=1/)
+  expect(embedRequests, 'video cards must not need embed.js').toHaveLength(0)
 })
 
 test('customize: picking options updates the price and adds the bag to the cart', async ({ page }) => {
