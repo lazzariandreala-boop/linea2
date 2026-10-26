@@ -11,7 +11,21 @@
 export const SOCIAL = {
   tiktok: {
     handle: 'linea2.upcycling',
-    videos: [] as string[],
+    // Featured videos, newest first (chosen by Andrea, 2026-10-26).
+    videos: [
+      'https://www.tiktok.com/@linea2.upcycling/video/7700687231962336545',
+      'https://www.tiktok.com/@linea2.upcycling/video/7693253616013970721',
+      'https://www.tiktok.com/@linea2.upcycling/video/7689540319695605025',
+      'https://www.tiktok.com/@linea2.upcycling/video/7685813243297811744',
+      'https://www.tiktok.com/@linea2.upcycling/video/7683587281436855584',
+      'https://www.tiktok.com/@linea2.upcycling/video/7682478446689275168',
+      'https://www.tiktok.com/@linea2.upcycling/video/7681009645451775264',
+      'https://www.tiktok.com/@linea2.upcycling/video/7678056020035325216',
+      'https://www.tiktok.com/@linea2.upcycling/video/7672354471132892448',
+      'https://www.tiktok.com/@linea2.upcycling/video/7667997375813684513',
+      'https://www.tiktok.com/@linea2.upcycling/video/7666913953104121121',
+      'https://www.tiktok.com/@linea2.upcycling/video/7665024485589896481',
+    ] as string[],
   },
   instagram: {
     handle: 'linea2.upcycling',
